@@ -3,6 +3,8 @@
 분석 결과는 콘솔에 출력하고, 차트는 output/ 폴더에 PNG로 저장한다.
 먼저 collect.py로 데이터를 모아야 한다.
 """
+from collections import Counter
+from itertools import combinations
 from math import comb
 from pathlib import Path
 
@@ -111,6 +113,15 @@ def range_share(df):
     actual = pd.Series([((nums >= lo) & (nums <= hi)).mean() for lo, hi in RANGES])
     theory = pd.Series([(hi - lo + 1) / 45 for lo, hi in RANGES])
     return actual, theory
+
+
+def pair_counts(df):
+    """두 번호가 같은 회차 당첨번호(보너스 제외)에 함께 나온 횟수.
+    (1,2), (1,3), ..., (1,45), (2,3), ..., (44,45) 순서로 990개를 돌려준다."""
+    counts = Counter()
+    for row in df[NUM_COLS].itertuples(index=False):
+        counts.update(combinations(sorted(row), 2))
+    return [counts[pair] for pair in combinations(NUMBERS, 2)]
 
 
 def draws_since_last_seen(df):

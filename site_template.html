@@ -45,6 +45,14 @@
     --ball-3: #ee6a5f;
     --ball-4: #a8a69e;
     --ball-5: #7cc142;
+    /* 히트맵 단계색 (적을수록 연하게, 파랑 한 가지) */
+    --seq-1: #cde2fb;
+    --seq-2: #9ec5f4;
+    --seq-3: #6da7ec;
+    --seq-4: #3987e5;
+    --seq-5: #256abf;
+    --seq-6: #184f95;
+    --seq-7: #0d366b;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -64,6 +72,14 @@
       --dim: #3a3a37;
       --link: #86b6ef;
       --shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      /* 어두운 배경에서는 적은 값이 배경 쪽(어둡게)으로 가라앉도록 순서를 뒤집는다 */
+      --seq-1: #0d366b;
+      --seq-2: #184f95;
+      --seq-3: #256abf;
+      --seq-4: #3987e5;
+      --seq-5: #6da7ec;
+      --seq-6: #9ec5f4;
+      --seq-7: #cde2fb;
     }
   }
 
@@ -262,11 +278,32 @@
   .record-value { font-size: 22px; font-weight: 650; line-height: 1.3; margin-top: 4px; }
   .record-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
+  /* 같이 잘 나오는 번호 (히트맵) */
+  .heat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: start; margin-top: 12px; }
+  .heat-layout svg { display: block; }
+  .s1 { fill: var(--seq-1); background: var(--seq-1); }
+  .s2 { fill: var(--seq-2); background: var(--seq-2); }
+  .s3 { fill: var(--seq-3); background: var(--seq-3); }
+  .s4 { fill: var(--seq-4); background: var(--seq-4); }
+  .s5 { fill: var(--seq-5); background: var(--seq-5); }
+  .s6 { fill: var(--seq-6); background: var(--seq-6); }
+  .s7 { fill: var(--seq-7); background: var(--seq-7); }
+  svg .heat-mark { fill: none; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+  .heat-scale { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .heat-scale .sw { width: 18px; height: 10px; border-radius: 2px; }
+  .heat-scale .end { margin: 0 4px; font-variant-numeric: tabular-nums; }
+  .pair-lists h3 { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0; }
+  .pair-list { list-style: none; padding: 0; margin: 8px 0 20px; }
+  .pair-list li { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 14px; color: var(--ink-2); }
+  .pair-list li strong { margin-left: auto; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .table-wrap.tall { max-height: 420px; overflow-y: auto; }
+
 
   @media (max-width: 760px) {
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .prize { margin-left: 0; }
     .records { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .heat-layout { grid-template-columns: 1fr; }
   }
   @media (max-width: 520px) {
     h1 { font-size: 24px; }
@@ -408,6 +445,29 @@
   <section class="card">
     <h2>역대 기록</h2>
     <div class="records" id="records"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>같이 잘 나오는 번호</h2>
+        <p class="sub" id="pair-sub"></p>
+      </div>
+      <button type="button" class="ghost" data-table="pair-table" aria-expanded="false">표로 보기</button>
+    </div>
+    <div class="heat-layout">
+      <div>
+        <div id="pair-chart"></div>
+        <div class="heat-scale" id="pair-scale"></div>
+      </div>
+      <div class="pair-lists">
+        <h3>가장 많이 함께 나온 번호</h3>
+        <ol class="pair-list" id="pair-top"></ol>
+        <h3>가장 적게 함께 나온 번호</h3>
+        <ol class="pair-list" id="pair-bottom"></ol>
+      </div>
+    </div>
+    <div class="table-wrap tall" id="pair-table" hidden></div>
   </section>
 </main>
 
@@ -999,6 +1059,95 @@
     }
   }
 
+  // ------------------------------------------------------------ 같이 잘 나오는 번호
+  // DATA.pairs는 (1,2), (1,3), ..., (1,45), (2,3), ..., (44,45) 순서 (build_site.py와 같은 순서)
+  const PAIRS = [];
+  for (let a = 1; a <= 45; a++) for (let b = a + 1; b <= 45; b++) PAIRS.push([a, b]);
+  const pairMatrix = Array.from({ length: 46 }, () => new Array(46).fill(0));
+  PAIRS.forEach(([a, b], i) => { pairMatrix[a][b] = pairMatrix[b][a] = DATA.pairs[i]; });
+  const pairExpected = DATA.windows.all.draws / 66;  // 두 번호가 한 회차에 함께 나올 확률은 1/66
+  const pairLo = Math.min(...DATA.pairs);
+  const pairHi = Math.max(...DATA.pairs);
+  // 횟수를 7단계 색으로 (가장 적은 값 1단계 ~ 가장 많은 값 7단계)
+  const pairLevel = (c) => Math.min(7, 1 + Math.floor(((c - pairLo) / (pairHi - pairLo + 1)) * 7));
+
+  function renderPairChart() {
+    const box = $('pair-chart');
+    const W = box.clientWidth;
+    const lab = 22;  // 왼쪽·위쪽 번호 표시 공간
+    const cell = Math.max(4, Math.min(16, Math.floor((W - lab - 10) / 45)));
+    const gap = cell >= 10 ? 2 : 1;
+    const size = lab + cell * 45;
+    const svgW = size + 10;  // 맨 오른쪽 위 번호(45)가 잘리지 않도록 여백
+    const [topA, topB] = PAIRS[DATA.pairs.indexOf(pairHi)];
+
+    box.textContent = '';
+    const svg = svgEl('svg', { width: svgW, height: size, viewBox: `0 0 ${svgW} ${size}`, role: 'img',
+      'aria-label': `번호 쌍이 함께 나온 횟수 히트맵. 가장 많은 쌍은 ${topA}번과 ${topB}번 ${pairHi}회` }, box);
+    for (let a = 1; a <= 45; a++) {
+      for (let b = 1; b <= 45; b++) {
+        if (a === b) continue;
+        svgEl('rect', { x: lab + (b - 1) * cell, y: lab + (a - 1) * cell, width: cell - gap, height: cell - gap,
+          class: `s${pairLevel(pairMatrix[a][b])}` }, svg);
+      }
+    }
+    const marks = cell >= 10 ? [1, 5, 10, 15, 20, 25, 30, 35, 40, 45] : [1, 10, 20, 30, 40, 45];
+    for (const n of marks) {
+      const mid = lab + (n - 0.5) * cell - gap / 2;
+      svgEl('text', { x: mid, y: lab - 7, class: 'tick', 'text-anchor': 'middle' }, svg).textContent = n;
+      svgEl('text', { x: lab - 5, y: mid, class: 'tick', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, svg)
+        .textContent = n;
+    }
+
+    // 칸이 작아서 칸마다 이벤트를 달지 않고, 마우스 위치로 어느 칸인지 계산한다
+    const mark = svgEl('rect', { class: 'heat-mark', width: cell - gap, height: cell - gap, visibility: 'hidden' }, svg);
+    const overlay = svgEl('rect', { x: lab, y: lab, width: cell * 45, height: cell * 45, class: 'hit' }, svg);
+    overlay.addEventListener('pointermove', (e) => {
+      const r = svg.getBoundingClientRect();
+      const b = Math.floor((e.clientX - r.left - lab) / cell) + 1;
+      const a = Math.floor((e.clientY - r.top - lab) / cell) + 1;
+      if (a < 1 || a > 45 || b < 1 || b > 45 || a === b) { hideTip(overlay); return; }
+      const c = pairMatrix[a][b];
+      mark.setAttribute('x', lab + (b - 1) * cell);
+      mark.setAttribute('y', lab + (a - 1) * cell);
+      mark.setAttribute('visibility', 'visible');
+      showTip(overlay, r.left + lab + (b - 0.5) * cell, r.top + lab + (a - 1) * cell - 4, {
+        value: `${c}회`,
+        label: `${Math.min(a, b)}번 & ${Math.max(a, b)}번 · 기대값보다 ${signed(c - pairExpected)}회`,
+      }, () => mark.setAttribute('visibility', 'hidden'));
+    });
+    overlay.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hideTip(overlay); });
+  }
+
+  function renderPairs() {
+    $('pair-sub').textContent = `두 번호가 같은 회차 당첨번호(보너스 제외)에 함께 나온 횟수입니다. ` +
+      `${fmt(DATA.windows.all.draws)}회 기준으로 한 쌍의 기대값은 약 ${pairExpected.toFixed(1)}회입니다.`;
+
+    const scale = $('pair-scale');
+    scale.textContent = '';
+    htmlEl('span', 'end', `${pairLo}회`, scale);
+    for (let s = 1; s <= 7; s++) htmlEl('span', `sw s${s}`, null, scale);
+    htmlEl('span', 'end', `${pairHi}회`, scale);
+
+    const sorted = PAIRS.map((p, i) => [p, DATA.pairs[i]]);
+    const byMost = [...sorted].sort((x, y) => y[1] - x[1]);
+    const fill = (list, items) => {
+      list.textContent = '';
+      for (const [[a, b], c] of items) {
+        const li = htmlEl('li', '', null, list);
+        ball(a, li, true);
+        ball(b, li, true);
+        htmlEl('strong', '', `${c}회`, li);
+      }
+    };
+    fill($('pair-top'), byMost.slice(0, 5));
+    fill($('pair-bottom'), [...sorted].sort((x, y) => x[1] - y[1]).slice(0, 5));
+
+    buildTable($('pair-table'), ['번호 쌍', '함께 나온 횟수', '기대값 대비'],
+      byMost.map(([[a, b], c]) => [`${a}번 & ${b}번`, `${c}회`, signed(c - pairExpected)]));
+    renderPairChart();
+  }
+
   // ------------------------------------------------------------ 전체 회차 기록 (기간 선택과 무관)
   function renderAllTime() {
     $('part-sub').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 기준이며, 위의 기간 선택과 관계없습니다.`;
@@ -1012,6 +1161,7 @@
       years.map((d) => [`${d.year}년`, `${d.draws}회`, ...TREND_METRICS.map((mt) => mt.value(d[mt.key]))]));
     renderTrend();
     renderRecords();
+    renderPairs();
   }
 
   // ------------------------------------------------------------ 기간 선택
@@ -1070,6 +1220,7 @@
     renderOddEven();
     renderSumRange();
     renderTrend();
+    renderPairChart();
   }).observe($('freq-chart'));
 })();
 </script>
