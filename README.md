@@ -91,6 +91,25 @@ python build_site.py   # 웹페이지 생성 → docs/index.html
 - Actions가 커밋을 추가하므로, 로컬에서 작업하기 전에 `git pull`을 먼저 하세요. `docs/`와 `lotto.csv.enc`는 Actions가 관리하므로 로컬에서 커밋하지 않습니다.
 - 키를 바꾸거나 잃어버렸다면, 로컬에서 `collect.py`로 데이터를 최신으로 맞춘 뒤 새 키를 만들어 `LOTTO_DATA_KEY` 환경 변수로 `python data_crypt.py encrypt`를 실행하고, 같은 키를 `gh secret set LOTTO_DATA_KEY`로 등록한 다음 `lotto.csv.enc`를 커밋하세요.
 
+### 수집 안전장치
+
+`collect.py`는 실행할 때마다(자동 갱신, 직접 실행 모두) 아래를 확인하고, 하나라도 걸리면 **데이터를 요청하지 않고 멈춥니다.** 자동 갱신에서 멈추면 GitHub이 실패 알림 메일을 보내고, 웹페이지는 마지막 정상 상태로 남습니다.
+
+| 확인 | 걸리면 |
+|---|---|
+| robots.txt에서 데이터 주소가 금지됨 | 멈춤 |
+| robots.txt를 읽지 못함 | 멈춤 |
+| robots.txt가 마지막으로 확인한 내용(`robots_snapshot.txt`)과 다름 | 멈춤. 바뀐 부분을 보여줍니다 |
+| 최신 회차 추첨일로부터 8일이 지났는데 새 회차가 없음 | 실패로 알림 (조용히 멈춰 있는 경우를 잡기 위해) |
+
+robots.txt가 바뀌어 멈췄다면 바뀐 내용을 직접 확인하고, 문제가 없을 때만 아래 명령으로 저장본을 갱신한 뒤 `robots_snapshot.txt`를 커밋하세요. 이 명령은 데이터를 수집하지 않습니다.
+
+```bash
+python collect.py --accept-robots
+```
+
+robots.txt 외의 규칙(이용약관 등)은 자동으로 확인할 수 없으므로 가끔 직접 확인합니다.
+
 ## 파일 구조
 
 | 파일 | 내용 |
@@ -101,6 +120,7 @@ python build_site.py   # 웹페이지 생성 → docs/index.html
 | `site_template.html` | 웹페이지 틀 (HTML, CSS, 자바스크립트 차트) |
 | `data_crypt.py` | 수집 데이터를 암호화·복호화 (자동 갱신용) |
 | `lotto.csv.enc` | 암호화된 수집 데이터. 키가 없으면 읽을 수 없습니다 |
+| `robots_snapshot.txt` | 마지막으로 직접 확인한 동행복권 robots.txt. 수집 전에 지금 내용과 비교합니다 |
 | `data/lotto.csv` | 수집한 데이터 (회차, 추첨일, 번호 6개, 보너스, 1등 당첨자 수·당첨금, 총판매금액). 레포에는 포함하지 않습니다 |
 | `docs/` | GitHub Pages로 공개되는 웹페이지 |
 | `screenshots/` | README용 웹페이지 화면 |
@@ -116,4 +136,5 @@ python build_site.py   # 웹페이지 생성 → docs/index.html
 - 동행복권 당첨결과 페이지(`/lt645/result`)가 화면을 그릴 때 내부적으로 호출하는 JSON 주소(`/lt645/selectPstLt645InfoNew.do`)를 사용합니다.
 - robots.txt에서 차단하는 경로는 `/resources/`, `/winImages/`뿐입니다. (2026-10-02 확인)
 - 요청 사이에 1초씩 쉬어 서버 부담을 줄이고, 자동 갱신 때는 새 회차만 요청합니다.
+- 수집할 때마다 robots.txt를 먼저 확인해, 금지되거나 내용이 바뀌면 수집하지 않습니다. ([수집 안전장치](#수집-안전장치))
 - 원본 당첨번호 데이터는 공개하지 않고, 웹페이지에는 집계 결과만 넣습니다.

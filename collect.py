@@ -6,17 +6,31 @@
 
 - 이미 저장된 회차는 건너뛰고 새 회차만 이어서 받는다. (매주 다시 실행하면 됨)
 - 한 번 요청에 10개 회차씩 오며, 요청 사이에 DELAY_SEC만큼 쉰다.
+
+안전장치 (하나라도 걸리면 데이터는 요청하지 않고 멈춘다):
+1. 수집 전에 robots.txt를 읽어 데이터 주소가 금지돼 있으면 멈춘다. 읽지 못해도 멈춘다.
+2. robots.txt가 마지막으로 사람이 확인한 내용(robots_snapshot.txt)과 다르면 멈춘다.
+   확인 후 문제가 없으면 `python collect.py --accept-robots`로 저장본을 갱신한다.
+3. 수집 후 최신 회차가 STALE_DAYS일 넘게 그대로면 실패로 알린다. (매주 토요일 추첨)
 """
 import csv
+import difflib
 import sys
 import time
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from urllib.robotparser import RobotFileParser
 
 import requests
 
 API_URL = "https://www.dhlottery.co.kr/lt645/selectPstLt645InfoNew.do"
-DATA_FILE = Path(__file__).parent / "data" / "lotto.csv"
+ROBOTS_URL = "https://www.dhlottery.co.kr/robots.txt"
+BASE_DIR = Path(__file__).parent
+DATA_FILE = BASE_DIR / "data" / "lotto.csv"
+ROBOTS_SNAPSHOT = BASE_DIR / "robots_snapshot.txt"  # 마지막으로 사람이 확인한 robots.txt
 DELAY_SEC = 1.0  # 서버에 부담을 주지 않도록 요청 사이 대기 시간(초)
+STALE_DAYS = 8   # 최신 추첨일로부터 이만큼 지나도 새 회차가 없으면 이상한 것
+KST = timezone(timedelta(hours=9))
 
 COLUMNS = [
     "draw_no",        # 회차
@@ -28,6 +42,61 @@ COLUMNS = [
     "total_sales",    # 총 판매금액(원)
 ]
 
+
+# ---------------------------------------------------------------- 안전장치
+
+def fetch_robots():
+    """동행복권 robots.txt 내용. 읽지 못하면 수집을 멈춘다."""
+    try:
+        res = requests.get(ROBOTS_URL, timeout=10)
+        res.raise_for_status()
+    except requests.RequestException as e:
+        sys.exit(f"[중단] robots.txt를 읽지 못해 수집하지 않습니다: {e}")
+    return res.text.replace("\r\n", "\n").strip()
+
+
+def is_allowed(robots_text):
+    """robots.txt 규칙상 우리 데이터 주소를 수집해도 되는지."""
+    parser = RobotFileParser()
+    parser.parse(robots_text.splitlines())
+    return parser.can_fetch(requests.utils.default_user_agent(), API_URL)
+
+
+def check_robots():
+    """수집 전 robots.txt 확인. 금지됐거나, 확인해 둔 내용과 달라졌으면 멈춘다."""
+    current = fetch_robots()
+    if not is_allowed(current):
+        sys.exit(f"[중단] robots.txt에서 데이터 주소({API_URL}) 수집을 금지하고 있어 수집하지 않습니다.")
+
+    saved = ROBOTS_SNAPSHOT.read_text(encoding="utf-8").strip() if ROBOTS_SNAPSHOT.exists() else ""
+    if current != saved:
+        diff = "\n".join(difflib.unified_diff(saved.splitlines(), current.splitlines(),
+                                              "확인해 둔 robots.txt", "지금 robots.txt", lineterm=""))
+        sys.exit("[중단] robots.txt 내용이 마지막으로 확인한 것과 달라 수집하지 않습니다.\n"
+                 f"{diff}\n"
+                 "내용을 확인하고 문제가 없으면 `python collect.py --accept-robots`로 저장본을 갱신하세요.")
+    print("robots.txt 확인: 변경 없음, 데이터 주소 수집 허용")
+
+
+def accept_robots():
+    """지금 robots.txt를 확인했다고 기록한다. (데이터는 수집하지 않는다)"""
+    current = fetch_robots()
+    ROBOTS_SNAPSHOT.write_text(current + "\n", encoding="utf-8")
+    print(current)
+    print(f"\n위 내용을 {ROBOTS_SNAPSHOT.name}에 저장했습니다.")
+    print("데이터 주소 수집: " + ("허용" if is_allowed(current) else "금지 → 수집하지 않습니다"))
+
+
+def check_fresh(last_date):
+    """최신 추첨일이 STALE_DAYS일 넘게 지났으면 실패로 알린다. (조용히 멈춰 있는 것을 잡기 위해)"""
+    today = datetime.now(KST).date()
+    days = (today - date.fromisoformat(last_date)).days
+    if days >= STALE_DAYS:
+        sys.exit(f"[확인 필요] 최신 회차 추첨일({last_date})로부터 {days}일이 지났는데 새 회차가 없습니다. "
+                 "사이트 응답이 바뀌었을 수 있습니다.")
+
+
+# ---------------------------------------------------------------- 수집
 
 def to_row(item):
     """API 응답의 한 회차 데이터를 CSV 한 줄(dict)로 바꾼다."""
@@ -62,16 +131,26 @@ def fetch_after(last_no):
     return sorted(rows, key=lambda row: row["draw_no"])
 
 
-def load_last_no():
-    """이미 저장된 마지막 회차 번호. 저장된 게 없으면 0."""
+def load_last():
+    """이미 저장된 마지막 회차의 (번호, 추첨일). 저장된 게 없으면 (0, None)."""
     if not DATA_FILE.exists():
-        return 0
+        return 0, None
     with DATA_FILE.open(encoding="utf-8", newline="") as f:
-        return max((int(row["draw_no"]) for row in csv.DictReader(f)), default=0)
+        rows = list(csv.DictReader(f))
+    if not rows:
+        return 0, None
+    last = max(rows, key=lambda row: int(row["draw_no"]))
+    return int(last["draw_no"]), last["draw_date"]
 
 
 def main():
-    last_no = load_last_no()
+    if "--accept-robots" in sys.argv:
+        accept_robots()
+        return
+
+    check_robots()
+
+    last_no, last_date = load_last()
     print(f"저장된 마지막 회차: {last_no}회" if last_no else "저장된 데이터 없음 → 1회차부터 수집")
 
     DATA_FILE.parent.mkdir(exist_ok=True)
@@ -86,12 +165,14 @@ def main():
         while rows := fetch_after(last_no):
             writer.writerows(rows)
             f.flush()  # 중간에 멈춰도 여기까지는 저장되도록
-            last_no = rows[-1]["draw_no"]
+            last_no, last_date = rows[-1]["draw_no"], rows[-1]["draw_date"]
             added += len(rows)
             print(f"  {rows[0]['draw_no']:>4}~{last_no}회 저장")
             time.sleep(DELAY_SEC)
 
     print(f"완료: {added}개 회차 추가 (최신 {last_no}회) → {DATA_FILE}")
+    if last_date:
+        check_fresh(last_date)
 
 
 if __name__ == "__main__":

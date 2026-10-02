@@ -4,6 +4,7 @@
 # 그래서 지난 데이터를 암호화해서(lotto.csv.enc) 레포에 보관하고, 복호화한 뒤 새 회차만 받는다. (요청 1~2번)
 # 암호 키는 레포 Settings → Secrets의 LOTTO_DATA_KEY에 있다.
 # 새 회차가 있어 페이지가 바뀌었을 때만 커밋·푸시하며, 푸시되면 GitHub Pages가 다시 배포된다.
+# collect.py는 수집 전에 robots.txt를 확인해, 금지됐거나 내용이 바뀌었으면 데이터를 요청하지 않고 실패한다. (→ 실패 메일)
 name: 로또 통계 갱신
 
 on:
