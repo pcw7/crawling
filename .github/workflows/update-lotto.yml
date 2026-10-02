@@ -1,0 +1,51 @@
+# 매주 로또 당첨번호를 수집해서 웹페이지(docs/lotto/index.html)를 갱신한다.
+# 새 회차가 있어 페이지가 바뀌었을 때만 커밋하고 푸시하며, 푸시되면 GitHub Pages가 다시 배포된다.
+# 수집 데이터(data/)는 레포에 올리지 않으므로 실행할 때마다 1회차부터 다시 수집한다. (약 3분)
+name: 로또 통계 갱신
+
+on:
+  schedule:
+    - cron: "17 0 * * 0"  # 매주 일요일 09:17 (한국 시간). 토요일 저녁 추첨 결과를 반영
+  workflow_dispatch:      # Actions 탭에서 수동 실행
+
+permissions:
+  contents: write  # 갱신된 페이지를 커밋하고 푸시하기 위해 필요
+
+concurrency:
+  group: update-lotto
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: lotto/requirements.txt
+
+      - name: 패키지 설치
+        run: pip install -r lotto/requirements.txt
+
+      - name: 당첨번호 수집
+        run: python lotto/collect.py
+
+      - name: 웹페이지 생성
+        run: python lotto/build_site.py
+
+      - name: 바뀐 내용 커밋
+        run: |
+          git add docs
+          if git diff --cached --quiet; then
+            echo "바뀐 내용이 없어 커밋하지 않습니다."
+            exit 0
+          fi
+          LAST=$(python -c "import pandas as pd; print(pd.read_csv('lotto/data/lotto.csv').draw_no.max())")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "로또 통계 페이지 갱신 (${LAST}회 기준)"
+          git pull --rebase
+          git push

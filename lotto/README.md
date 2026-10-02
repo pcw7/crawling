@@ -14,7 +14,15 @@ python analyze.py      # 분석 결과 출력 + 차트 → output/
 python build_site.py   # 웹페이지 생성 → ../docs/lotto/index.html
 ```
 
-`collect.py`는 이미 저장된 회차를 건너뛰고 새 회차만 받아 옵니다. 매주 토요일 추첨이 끝난 뒤 다시 실행하고, `build_site.py`로 페이지를 만든 다음 푸시하면 웹페이지가 갱신됩니다.
+`collect.py`는 이미 저장된 회차를 건너뛰고 새 회차만 받아 옵니다.
+
+## 자동 갱신
+
+GitHub Actions([`.github/workflows/update-lotto.yml`](../.github/workflows/update-lotto.yml))가 매주 일요일 09:17(한국 시간)에
+수집과 페이지 생성을 실행하고, 새 회차가 있으면 커밋·푸시해서 웹페이지를 갱신합니다.
+레포의 **Actions 탭 → 로또 통계 갱신 → Run workflow**로 바로 실행할 수도 있습니다.
+
+아래 차트 이미지는 자동 갱신되지 않는 1243회 기준 스냅샷입니다. 최신 결과는 웹페이지에서 볼 수 있습니다.
 
 ## 결과 (1~1243회 기준)
 

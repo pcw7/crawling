@@ -693,7 +693,7 @@
       : `전체 ${fmt(all.draws)}회 동안 번호별 출현 횟수 차이가 카이제곱 기준값(${DATA.chi2Critical})을 넘었습니다(${all.chi2.toFixed(1)}). ` +
         '다만 이것만으로 특정 번호가 더 잘 나온다고 할 수는 없으며, 매 회차 추첨은 이전 결과와 상관없이 독립적으로 이루어집니다.';
 
-    $('updated').textContent = `데이터 기준 ${DATA.last.no}회 · 페이지 생성 ${DATA.generated}`;
+    $('updated').textContent = `데이터 기준 ${DATA.last.no}회 (${DATA.last.date} 추첨)`;
   }
 
   // ------------------------------------------------------------ 기간 선택

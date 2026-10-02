@@ -5,7 +5,6 @@ site_template.html의 __DATA__ 자리에 JSON으로 넣고, 레포 루트의 doc
 원본 당첨번호 전체는 넣지 않고 집계 결과만 넣는다.
 """
 import json
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -39,8 +38,9 @@ def main():
     first, last = df.iloc[0], df.iloc[-1]
     _, theory = odd_even_ratio(df)
 
+    # 같은 데이터면 항상 같은 페이지가 나오도록 생성 날짜 같은 값은 넣지 않는다.
+    # (자동 갱신 때 새 회차가 없으면 바뀐 게 없어 커밋하지 않게 하려는 것)
     data = {
-        "generated": date.today().isoformat(),
         "first": {"no": int(first.draw_no), "date": first.draw_date},
         "last": {
             "no": int(last.draw_no),
