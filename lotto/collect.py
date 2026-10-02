@@ -1,0 +1,98 @@
+"""동행복권 로또 6/45 당첨번호 수집기.
+
+동행복권 '당첨결과' 페이지(https://www.dhlottery.co.kr/lt645/result)는
+화면을 그릴 때 아래 API_URL에서 JSON으로 당첨 정보를 받아온다.
+이 주소를 직접 호출해 1회차부터 최신 회차까지 모아 data/lotto.csv에 저장한다.
+
+- 이미 저장된 회차는 건너뛰고 새 회차만 이어서 받는다. (매주 다시 실행하면 됨)
+- 한 번 요청에 10개 회차씩 오며, 요청 사이에 DELAY_SEC만큼 쉰다.
+"""
+import csv
+import sys
+import time
+from pathlib import Path
+
+import requests
+
+API_URL = "https://www.dhlottery.co.kr/lt645/selectPstLt645InfoNew.do"
+DATA_FILE = Path(__file__).parent / "data" / "lotto.csv"
+DELAY_SEC = 1.0  # 서버에 부담을 주지 않도록 요청 사이 대기 시간(초)
+
+COLUMNS = [
+    "draw_no",        # 회차
+    "draw_date",      # 추첨일
+    "n1", "n2", "n3", "n4", "n5", "n6",  # 당첨번호 6개 (오름차순)
+    "bonus",          # 보너스 번호
+    "first_winners",  # 1등 당첨자 수
+    "first_prize",    # 1등 1인당 당첨금(원)
+    "total_sales",    # 총 판매금액(원)
+]
+
+
+def to_row(item):
+    """API 응답의 한 회차 데이터를 CSV 한 줄(dict)로 바꾼다."""
+    ymd = item["ltRflYmd"]  # 예: "20240127"
+    return {
+        "draw_no": item["ltEpsd"],
+        "draw_date": f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}",
+        **{f"n{i}": item[f"tm{i}WnNo"] for i in range(1, 7)},
+        "bonus": item["bnsWnNo"],
+        "first_winners": item["rnk1WnNope"],
+        "first_prize": item["rnk1WnAmt"],
+        "total_sales": item["wholEpsdSumNtslAmt"],
+    }
+
+
+def fetch_after(last_no):
+    """last_no 회차 다음부터 최대 10개 회차를 회차 오름차순으로 가져온다."""
+    if last_no == 0:
+        params = {"srchDir": "center", "srchLtEpsd": 1}  # 1~10회
+    else:
+        params = {"srchDir": "latest", "srchCursorLtEpsd": last_no}
+
+    res = requests.get(API_URL, params=params, timeout=10)
+    res.raise_for_status()
+    try:
+        items = res.json()["data"]["list"]
+    except (ValueError, KeyError, TypeError):
+        # 추첨 시간대나 점검 중에는 JSON 대신 안내 페이지가 올 수 있다.
+        sys.exit("응답이 예상한 형식이 아닙니다. 사이트 점검 중일 수 있으니 잠시 후 다시 실행해 주세요.")
+
+    rows = [to_row(item) for item in items if item["ltEpsd"] > last_no]
+    return sorted(rows, key=lambda row: row["draw_no"])
+
+
+def load_last_no():
+    """이미 저장된 마지막 회차 번호. 저장된 게 없으면 0."""
+    if not DATA_FILE.exists():
+        return 0
+    with DATA_FILE.open(encoding="utf-8", newline="") as f:
+        return max((int(row["draw_no"]) for row in csv.DictReader(f)), default=0)
+
+
+def main():
+    last_no = load_last_no()
+    print(f"저장된 마지막 회차: {last_no}회" if last_no else "저장된 데이터 없음 → 1회차부터 수집")
+
+    DATA_FILE.parent.mkdir(exist_ok=True)
+    write_header = not DATA_FILE.exists()
+    added = 0
+
+    with DATA_FILE.open("a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=COLUMNS)
+        if write_header:
+            writer.writeheader()
+
+        while rows := fetch_after(last_no):
+            writer.writerows(rows)
+            f.flush()  # 중간에 멈춰도 여기까지는 저장되도록
+            last_no = rows[-1]["draw_no"]
+            added += len(rows)
+            print(f"  {rows[0]['draw_no']:>4}~{last_no}회 저장")
+            time.sleep(DELAY_SEC)
+
+    print(f"완료: {added}개 회차 추가 (최신 {last_no}회) → {DATA_FILE}")
+
+
+if __name__ == "__main__":
+    main()
