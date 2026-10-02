@@ -12,7 +12,7 @@ import pandas as pd
 
 from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
                      draws_since_last_seen, number_frequency, odd_even_ratio,
-                     records, yearly_trend)
+                     range_share, records, sum_distribution, sum_theory, yearly_trend)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATE_FILE = BASE_DIR / "site_template.html"
@@ -24,11 +24,15 @@ def summarize(df):
     """한 기간의 번호별 빈도, 홀짝 비율, 카이제곱 값."""
     freq = number_frequency(df)
     actual, _ = odd_even_ratio(df)
+    ranges, _ = range_share(df)
     return {
         "draws": len(df),
         "freq": freq.tolist(),
-        "oddEven": [round(x, 4) for x in actual],
+        "oddEven": [round(x, 6) for x in actual],
         "chi2": round(float(chi_square(freq)), 1),
+        "sumDist": [round(x, 6) for x in sum_distribution(df)],
+        "sumMean": round(float(df[NUM_COLS].sum(axis=1).mean()), 1),
+        "rangeShare": [round(x, 6) for x in ranges],
     }
 
 
@@ -39,6 +43,7 @@ def main():
     df = pd.read_csv(DATA_FILE).sort_values("draw_no")
     first, last = df.iloc[0], df.iloc[-1]
     _, theory = odd_even_ratio(df)
+    _, range_theory = range_share(df)
 
     # 같은 데이터면 항상 같은 페이지가 나오도록 생성 날짜 같은 값은 넣지 않는다.
     # (자동 갱신 때 새 회차가 없으면 바뀐 게 없어 커밋하지 않게 하려는 것)
@@ -53,7 +58,9 @@ def main():
             "firstPrize": int(last.first_prize),      # 1등 1인당 당첨금(원)
         },
         "chi2Critical": CHI2_CRITICAL,
-        "oddEvenTheory": [round(x, 4) for x in theory],
+        "oddEvenTheory": [round(x, 6) for x in theory],
+        "sumTheory": [round(x, 6) for x in sum_theory()],
+        "rangeTheory": [round(x, 6) for x in range_theory],
         "gap": draws_since_last_seen(df).astype(int).tolist(),
         "windows": {key: summarize(df if n is None else df.tail(n)) for key, n in WINDOWS.items()},
         "yearly": yearly_trend(df),

@@ -187,6 +187,7 @@
   .chart svg { display: block; }
   #freq-chart { height: 280px; }
   #oe-chart { height: 260px; }
+  #sum-chart, #range-chart { height: 240px; }
   svg .grid { stroke: var(--grid); stroke-width: 1; }
   svg .axis { stroke: var(--baseline); stroke-width: 1; }
   svg .ref { stroke: var(--ink-2); stroke-width: 1; }
@@ -344,6 +345,29 @@
     </div>
     <div class="chart" id="oe-chart"></div>
     <div class="table-wrap" id="oe-table" hidden></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>번호 합계와 번호대</h2>
+        <p class="sub" id="sum-sub"></p>
+      </div>
+      <button type="button" class="ghost" data-table="sum-table" aria-expanded="false">표로 보기</button>
+    </div>
+    <div class="legend">
+      <span class="key"><span class="sw-bar"></span>실제 비율</span>
+      <span class="key"><span class="sw-dot"></span>이론 확률</span>
+    </div>
+    <div class="mini">
+      <h3>회차별 번호 6개의 합계</h3>
+      <div class="chart" id="sum-chart"></div>
+    </div>
+    <div class="mini">
+      <h3>번호대별 당첨번호 비율</h3>
+      <div class="chart" id="range-chart"></div>
+    </div>
+    <div class="table-wrap" id="sum-table" hidden></div>
   </section>
 
   <section class="card">
@@ -599,12 +623,11 @@
     });
   }
 
-  // ------------------------------------------------------------ 홀짝 조합
-  function renderOddEven() {
-    const box = $('oe-chart');
-    const w = win();
-    const actual = w.oddEven;
-    const theory = DATA.oddEvenTheory;
+  // ------------------------------------------------------------ 실제 비율(막대) vs 이론 확률(점) 차트
+  // 홀짝 조합, 번호 합계, 번호대별 비율에서 같이 쓴다.
+  // labels: 가로축 이름, shortLabels: 막대 폭이 좁을 때 쓸 짧은 이름, itemLabel(i): 툴팁 제목,
+  // count(i): 툴팁에 함께 보여 줄 실제 횟수
+  function drawCompareChart(box, { actual, theory, labels, shortLabels, axisTitle, ariaLabel, itemLabel, count }) {
     const W = box.clientWidth;
     const H = box.clientHeight;
     const m = { top: 24, right: 8, bottom: 48, left: 40 };
@@ -613,13 +636,12 @@
     const ticks = niceTicks(Math.max(...actual, ...theory) * 100);
     const yMax = ticks[ticks.length - 1];
     const y = (ratio) => m.top + ph - ((ratio * 100) / yMax) * ph;
-    const band = pw / 7;
+    const band = pw / actual.length;
     const bw = Math.min(24, band * 0.5);
-    const [from, to] = rangeOf(w);
+    const names = shortLabels && band < 64 ? shortLabels : labels;
 
     box.textContent = '';
-    const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'group',
-      'aria-label': `회차별 홀짝 조합 비율, ${from}~${to}회` }, box);
+    const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'group', 'aria-label': ariaLabel }, box);
 
     for (const t of ticks) {
       const ty = y(t / 100);
@@ -641,27 +663,73 @@
           .textContent = pct(a);
       }
       svgEl('text', { x: cx, y: m.top + ph + 20, class: 'xlabel', 'text-anchor': 'middle' }, svg)
-        .textContent = `${k}:${6 - k}`;
+        .textContent = names[k];
       return bar;
     });
 
     svgEl('text', { x: m.left + pw / 2, y: H - 4, class: 'tick', 'text-anchor': 'middle' }, svg)
-      .textContent = '홀수 : 짝수';
+      .textContent = axisTitle;
 
     actual.forEach((a, k) => {
       const hit = svgEl('rect', { x: m.left + band * k, y: m.top, width: band, height: ph, class: 'hit',
-        tabindex: 0, role: 'img', 'aria-label': `홀수 ${k}개 짝수 ${6 - k}개: 실제 ${pct(a)}, 이론 ${pct(theory[k])}` }, svg);
+        tabindex: 0, role: 'img', 'aria-label': `${itemLabel(k)}: 실제 ${pct(a)}, 이론 ${pct(theory[k])}` }, svg);
       bindHover(hit, () => {
         bars[k].classList.add('is-lift');
         const r = svg.getBoundingClientRect();
         showTip(hit, r.left + m.left + band * (k + 0.5), r.top + Math.min(y(a), y(theory[k])), {
-          label: `홀수 ${k}개 · 짝수 ${6 - k}개`,
+          label: itemLabel(k),
           rows: [
-            { color: '--series-1', value: pct(a), name: `실제 (${fmt(Math.round(a * w.draws))}회)` },
+            { color: '--series-1', value: pct(a), name: `실제 (${count(k)})` },
             { color: '--series-2', value: pct(theory[k]), name: '이론 확률' },
           ],
         }, () => bars[k].classList.remove('is-lift'));
       });
+    });
+  }
+
+  // ------------------------------------------------------------ 홀짝 조합
+  function renderOddEven() {
+    const w = win();
+    const [from, to] = rangeOf(w);
+    drawCompareChart($('oe-chart'), {
+      actual: w.oddEven,
+      theory: DATA.oddEvenTheory,
+      labels: w.oddEven.map((_, k) => `${k}:${6 - k}`),
+      axisTitle: '홀수 : 짝수',
+      ariaLabel: `회차별 홀짝 조합 비율, ${from}~${to}회`,
+      itemLabel: (k) => `홀수 ${k}개 · 짝수 ${6 - k}개`,
+      count: (k) => `${fmt(Math.round(w.oddEven[k] * w.draws))}회`,
+    });
+  }
+
+  // ------------------------------------------------------------ 번호 합계와 번호대별 비율
+  const SUM_LABELS = Array.from({ length: 10 }, (_, i) =>
+    i === 0 ? '60 이하' : i === 9 ? '221 이상' : `${41 + 20 * i}~${60 + 20 * i}`);
+  const SUM_SHORT = Array.from({ length: 10 }, (_, i) =>
+    i === 0 ? '~60' : i === 9 ? '221~' : `${41 + 20 * i}`);
+  const RANGE_LABELS = ['1~10', '11~20', '21~30', '31~40', '41~45'];
+
+  function renderSumRange() {
+    const w = win();
+    const [from, to] = rangeOf(w);
+    drawCompareChart($('sum-chart'), {
+      actual: w.sumDist,
+      theory: DATA.sumTheory,
+      labels: SUM_LABELS,
+      shortLabels: SUM_SHORT,
+      axisTitle: '번호 6개의 합계',
+      ariaLabel: `회차별 번호 합계 분포, ${from}~${to}회`,
+      itemLabel: (i) => `합계 ${SUM_LABELS[i]}`,
+      count: (i) => `${fmt(Math.round(w.sumDist[i] * w.draws))}회`,
+    });
+    drawCompareChart($('range-chart'), {
+      actual: w.rangeShare,
+      theory: DATA.rangeTheory,
+      labels: RANGE_LABELS,
+      axisTitle: '번호대',
+      ariaLabel: `번호대별 당첨번호 비율, ${from}~${to}회`,
+      itemLabel: (i) => `${RANGE_LABELS[i]}번대`,
+      count: (i) => `${fmt(Math.round(w.rangeShare[i] * w.draws * 6))}개`,
     });
   }
 
@@ -701,6 +769,10 @@
       w.freq.map((f, i) => [`${i + 1}번`, `${fmt(f)}회`, signed(f - expected)]));
     buildTable($('oe-table'), ['홀:짝', '실제 비율', '실제 횟수', '이론 확률'],
       w.oddEven.map((a, k) => [`${k}:${6 - k}`, pct(a), `${fmt(Math.round(a * w.draws))}회`, pct(DATA.oddEvenTheory[k])]));
+    buildTable($('sum-table'), ['구분', '실제 비율', '실제', '이론 확률'], [
+      ...w.sumDist.map((a, i) => [`합계 ${SUM_LABELS[i]}`, pct(a), `${fmt(Math.round(a * w.draws))}회`, pct(DATA.sumTheory[i])]),
+      ...w.rangeShare.map((a, i) => [`${RANGE_LABELS[i]}번대`, pct(a), `${fmt(Math.round(a * w.draws * 6))}개`, pct(DATA.rangeTheory[i])]),
+    ]);
   }
 
   document.querySelectorAll('[data-table]').forEach((btn) => {
@@ -949,9 +1021,11 @@
     const [from, to] = rangeOf(w);
     $('freq-sub').textContent = `${from}~${to}회 · 보너스 번호 제외 · 가로선은 모든 번호가 똑같이 나올 때의 기대값(${expectedOf(w).toFixed(1)}회)`;
     $('oe-sub').textContent = `${from}~${to}회 · 1~45 중 홀수는 23개, 짝수는 22개`;
+    $('sum-sub').textContent = `${from}~${to}회 · 번호 6개 합계의 평균은 ${w.sumMean.toFixed(1)} (이론 138)`;
     renderTiles();
     renderFreq();
     renderOddEven();
+    renderSumRange();
     renderTables();
     renderMine();
   }
@@ -994,6 +1068,7 @@
     hideTip();
     renderFreq();
     renderOddEven();
+    renderSumRange();
     renderTrend();
   }).observe($('freq-chart'));
 })();

@@ -74,6 +74,45 @@ def odd_even_ratio(df):
     return actual, theory
 
 
+# 번호 6개 합계(21~255) 구간: 60 이하, 61~80, 81~100, ..., 201~220, 221 이상 (양 끝은 거의 안 나와서 묶음)
+SUM_BIN_COUNT = 10
+RANGES = [(1, 10), (11, 20), (21, 30), (31, 40), (41, 45)]
+
+
+def sum_bin(total):
+    """번호 합계가 속한 구간 번호(0~9)."""
+    return min(max((total - 41) // 20, 0), SUM_BIN_COUNT - 1)
+
+
+def sum_distribution(df):
+    """회차별 번호 6개 합계가 각 구간에 들어간 비율."""
+    bins = df[NUM_COLS].sum(axis=1).map(sum_bin)
+    return bins.value_counts(normalize=True).reindex(range(SUM_BIN_COUNT), fill_value=0)
+
+
+def sum_theory():
+    """1~45에서 6개를 뽑을 때 합계 구간별 이론 확률. 모든 조합(8,145,060개)의 합을 세어 계산한다."""
+    # ways[k][s]: 지금까지 본 번호 중 k개를 골라 합이 s가 되는 경우의 수
+    ways = [[0] * 256 for _ in range(7)]
+    ways[0][0] = 1
+    for n in NUMBERS:
+        for k in range(6, 0, -1):
+            for s in range(255, n - 1, -1):
+                ways[k][s] += ways[k - 1][s - n]
+    shares = [0.0] * SUM_BIN_COUNT
+    for s in range(21, 256):
+        shares[sum_bin(s)] += ways[6][s] / comb(45, 6)
+    return pd.Series(shares)
+
+
+def range_share(df):
+    """당첨번호(보너스 제외)가 1~10, 11~20, 21~30, 31~40, 41~45 구간에 속한 비율과 이론 비율."""
+    nums = df[NUM_COLS].to_numpy().ravel()
+    actual = pd.Series([((nums >= lo) & (nums <= hi)).mean() for lo, hi in RANGES])
+    theory = pd.Series([(hi - lo + 1) / 45 for lo, hi in RANGES])
+    return actual, theory
+
+
 def draws_since_last_seen(df):
     """번호별로 마지막으로 나온 뒤 몇 회차째 안 나오고 있는지."""
     long = df.melt(id_vars="draw_no", value_vars=NUM_COLS, value_name="number")
