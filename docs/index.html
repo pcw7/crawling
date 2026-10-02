@@ -171,7 +171,7 @@
   .prize dd { margin: 0; font-size: 16px; font-weight: 650; color: var(--ink); }
 
   /* 기간 필터 */
-  .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 28px 0 12px; }
+  .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
   .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
   .seg button {
     border: 0; background: transparent; color: var(--ink-2);
@@ -201,7 +201,7 @@
   /* 차트 */
   .chart { position: relative; width: 100%; }
   .chart svg { display: block; }
-  #freq-chart { height: 280px; }
+  #freq-chart, #mine-chart { height: 280px; }
   #oe-chart { height: 260px; }
   #sum-chart, #range-chart { height: 240px; }
   svg .grid { stroke: var(--grid); stroke-width: 1; }
@@ -261,9 +261,20 @@
   .gap-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
   .gap-list strong { color: var(--ink); }
 
-  /* 전체 회차 기록 구역 (기간 선택과 무관) */
-  .part { margin: 40px 0 16px; padding-top: 28px; border-top: 1px solid var(--grid); }
-  .part h2 { font-size: 22px; }
+  /* 탭: 스크롤해도 화면 위에 붙어 있다 */
+  .tabs {
+    position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; margin-top: 28px;
+    background: var(--page); border-bottom: 1px solid var(--grid);
+  }
+  .tabs button {
+    border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent;
+    font: inherit; font-size: 16px; font-weight: 600; color: var(--muted); padding: 14px 14px 12px; cursor: pointer;
+  }
+  .tabs button:hover { color: var(--ink-2); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .tabs button:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; border-radius: 6px; }
+  .panel { padding-top: 16px; }
+  .panel-note { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; }
 
   /* 연도별 추이: 같은 가로축(연도)을 쓰는 작은 차트 3개 */
   .mini + .mini { margin-top: 20px; }
@@ -350,6 +361,14 @@
     </div>
   </header>
 
+  <div class="tabs" role="tablist" aria-label="보기 선택">
+    <button type="button" role="tab" id="tab-stats" data-tab="stats" aria-controls="panel-stats">번호 통계</button>
+    <button type="button" role="tab" id="tab-mine" data-tab="mine" aria-controls="panel-mine">내 번호</button>
+    <button type="button" role="tab" id="tab-records" data-tab="records" aria-controls="panel-records">역대 기록</button>
+  </div>
+
+  <!-- 탭 1: 번호 통계 (기간 선택이 이 탭 안에만 적용된다) -->
+  <div class="panel" id="panel-stats" role="tabpanel" aria-labelledby="tab-stats">
   <div class="filter">
     <div class="seg" id="win-seg" role="group" aria-label="분석 기간"></div>
   </div>
@@ -408,8 +427,17 @@
   </section>
 
   <section class="card">
+    <h2>오래 안 나온 번호</h2>
+    <p class="sub" id="gap-sub"></p>
+    <ol class="gap-list" id="gap-list"></ol>
+  </section>
+  </div>
+
+  <!-- 탭 2: 내 번호 -->
+  <div class="panel" id="panel-mine" role="tabpanel" aria-labelledby="tab-mine" hidden>
+  <section class="card">
     <h2>내 번호 조회</h2>
-    <p class="sub">번호를 최대 6개까지 입력하면 선택한 기간에 각 번호가 몇 번 나왔는지 보여 주고, 위 차트에도 표시합니다.</p>
+    <p class="sub">번호를 최대 6개까지 입력하면 전체·최근 100회·최근 50회 동안 각 번호가 몇 번 나왔는지 보여 주고, 아래 차트에 표시합니다.</p>
     <form class="mine-form" id="mine-form">
       <input id="mine-input" inputmode="numeric" autocomplete="off" placeholder="예: 3 11 24 30 38 42" aria-label="번호 입력 (공백이나 쉼표로 구분)">
       <button type="submit" class="primary">조회</button>
@@ -420,15 +448,15 @@
   </section>
 
   <section class="card">
-    <h2>오래 안 나온 번호</h2>
-    <p class="sub" id="gap-sub"></p>
-    <ol class="gap-list" id="gap-list"></ol>
+    <h2>내 번호의 위치</h2>
+    <p class="sub" id="mine-chart-sub"></p>
+    <div class="chart" id="mine-chart"></div>
   </section>
-
-  <div class="part">
-    <h2>전체 회차 기록</h2>
-    <p class="sub" id="part-sub"></p>
   </div>
+
+  <!-- 탭 3: 역대 기록 (전체 회차 기준) -->
+  <div class="panel" id="panel-records" role="tabpanel" aria-labelledby="tab-records" hidden>
+  <p class="panel-note" id="records-note"></p>
 
   <section class="card">
     <div class="card-head">
@@ -443,7 +471,7 @@
   </section>
 
   <section class="card">
-    <h2>역대 기록</h2>
+    <h2>주요 기록</h2>
     <div class="records" id="records"></div>
   </section>
 
@@ -469,6 +497,7 @@
     </div>
     <div class="table-wrap tall" id="pair-table" hidden></div>
   </section>
+  </div>
 </main>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>
@@ -604,12 +633,12 @@
   });
 
   // ------------------------------------------------------------ 번호별 당첨 횟수
-  function renderFreq() {
-    const box = $('freq-chart');
-    const w = win();
+  // 번호 통계 탭과 내 번호 탭에서 같이 쓴다. mine에 번호가 있으면 그 번호만 진하게, 나머지는 흐리게 그린다.
+  function drawFreqChart(box, w, mine = new Set()) {
+    const W = box.clientWidth;
+    if (!W) return;  // 숨겨진 탭에서는 그리지 않는다 (탭을 열 때 그린다)
     const freq = w.freq;
     const expected = expectedOf(w);
-    const W = box.clientWidth;
     const H = box.clientHeight;
     const wide = W >= 520;
     const m = { top: 22, right: wide ? 56 : 8, bottom: 26, left: 34 };
@@ -620,7 +649,6 @@
     const y = (v) => m.top + ph - (v / yMax) * ph;
     const band = pw / 45;
     const bw = Math.min(24, Math.max(2, band * 0.6));
-    const mine = new Set(state.mine);
     const [from, to] = rangeOf(w);
 
     box.textContent = '';
@@ -647,8 +675,8 @@
         .textContent = `${expected.toFixed(1)}회`;
     }
 
-    // 가장 많이/적게 나온 번호에만 값 표시 (막대가 충분히 넓을 때)
-    if (band >= 14) {
+    // 가장 많이/적게 나온 번호에만 값 표시 (막대가 충분히 넓을 때, 내 번호를 강조할 때는 빼서 시선을 모은다)
+    if (band >= 14 && !mine.size) {
       for (const target of [Math.max(...freq), Math.min(...freq)]) {
         const idx = freq.flatMap((f, i) => (f === target ? [i] : []));
         if (idx.length > 3) continue;
@@ -683,12 +711,17 @@
     });
   }
 
+  function renderFreq() {
+    drawFreqChart($('freq-chart'), win());
+  }
+
   // ------------------------------------------------------------ 실제 비율(막대) vs 이론 확률(점) 차트
   // 홀짝 조합, 번호 합계, 번호대별 비율에서 같이 쓴다.
   // labels: 가로축 이름, shortLabels: 막대 폭이 좁을 때 쓸 짧은 이름, itemLabel(i): 툴팁 제목,
   // count(i): 툴팁에 함께 보여 줄 실제 횟수
   function drawCompareChart(box, { actual, theory, labels, shortLabels, axisTitle, ariaLabel, itemLabel, count }) {
     const W = box.clientWidth;
+    if (!W) return;  // 숨겨진 탭
     const H = box.clientHeight;
     const m = { top: 24, right: 8, bottom: 48, left: 40 };
     const pw = W - m.left - m.right;
@@ -846,34 +879,45 @@
   });
 
   // ------------------------------------------------------------ 내 번호 조회
+  // 기간 선택과 관계없이 전체·최근 100회·최근 50회를 한 표에 보여준다
   function renderMine() {
     const box = $('mine-result');
     box.textContent = '';
     if (!state.mine.length) return;
-    const w = win();
-    const freq = w.freq;
-    const [from, to] = rangeOf(w);
-    htmlEl('p', 'mine-summary', `${from}~${to}회 기준 · 기대값 ${expectedOf(w).toFixed(1)}회`, box);
+    const windows = WIN_KEYS.map((key) => DATA.windows[key]);
+    htmlEl('p', 'mine-summary', '기대값: ' +
+      WIN_KEYS.map((key, i) => `${key === 'all' ? '전체' : `최근 ${key}회`} ${expectedOf(windows[i]).toFixed(1)}회`).join(' · '), box);
 
+    const allFreq = DATA.windows.all.freq;
     const rows = state.mine.map((n) => {
-      const f = freq[n - 1];
-      const higher = freq.filter((v) => v > f).length;
-      const tie = freq.filter((v) => v === f).length > 1;
+      const f = allFreq[n - 1];
+      const higher = allFreq.filter((v) => v > f).length;
+      const tie = allFreq.filter((v) => v === f).length > 1;
       const gap = DATA.gap[n - 1];
       return [
         ball(n, null, true),
-        `${fmt(f)}회`,
-        `${tie ? '공동 ' : ''}${higher + 1}위`,
+        `${fmt(f)}회 (${tie ? '공동 ' : ''}${higher + 1}위)`,
+        `${fmt(DATA.windows['100'].freq[n - 1])}회`,
+        `${fmt(DATA.windows['50'].freq[n - 1])}회`,
         gap === 0 ? `${DATA.last.no}회 (최신)` : `${DATA.last.no - gap}회 (${gap}회 전)`,
       ];
     });
-    buildTable(htmlEl('div', 'table-wrap', null, box), ['번호', '당첨 횟수', '45개 중 순위', '마지막 출현'], rows);
+    buildTable(htmlEl('div', 'table-wrap', null, box), ['번호', '전체 (순위)', '최근 100회', '최근 50회', '마지막 출현'], rows);
 
     if (state.mine.length === 6) {
+      const all = DATA.windows.all;
       const odd = state.mine.filter((n) => n % 2 === 1).length;
       htmlEl('p', 'mine-summary',
-        `홀짝 ${odd}:${6 - odd} 조합은 이 기간 회차의 ${pct(w.oddEven[odd])}에서 나왔습니다. (이론 확률 ${pct(DATA.oddEvenTheory[odd])})`, box);
+        `홀짝 ${odd}:${6 - odd} 조합은 전체 회차의 ${pct(all.oddEven[odd])}에서 나왔습니다. (이론 확률 ${pct(DATA.oddEvenTheory[odd])})`, box);
     }
+  }
+
+  function renderMineChart() {
+    const w = DATA.windows.all;
+    const [from, to] = rangeOf(w);
+    $('mine-chart-sub').textContent = `번호별 당첨 횟수 (${from}~${to}회 전체) · ` +
+      (state.mine.length ? '입력한 번호만 진하게 표시했습니다.' : '번호를 조회하면 그 번호만 진하게 표시합니다.');
+    drawFreqChart($('mine-chart'), w, new Set(state.mine));
   }
 
   const mineInput = $('mine-input');
@@ -893,7 +937,7 @@
     state.mine = nums.sort((a, b) => a - b);
     mineClear.hidden = false;
     renderMine();
-    renderFreq();
+    renderMineChart();
   });
 
   mineClear.addEventListener('click', () => {
@@ -902,7 +946,7 @@
     mineError.textContent = '';
     mineClear.hidden = true;
     renderMine();
-    renderFreq();
+    renderMineChart();
   });
 
   // ------------------------------------------------------------ 기간과 무관한 부분
@@ -1005,6 +1049,7 @@
 
   function renderTrend() {
     const box = $('trend');
+    if (!box.clientWidth) return;  // 숨겨진 탭
     box.textContent = '';
     const charts = TREND_METRICS.map((metric, idx) => {
       const wrap = htmlEl('div', 'mini', null, box);
@@ -1074,6 +1119,7 @@
   function renderPairChart() {
     const box = $('pair-chart');
     const W = box.clientWidth;
+    if (!W) return;  // 숨겨진 탭
     const lab = 22;  // 왼쪽·위쪽 번호 표시 공간
     const cell = Math.max(4, Math.min(16, Math.floor((W - lab - 10) / 45)));
     const gap = cell >= 10 ? 2 : 1;
@@ -1150,7 +1196,7 @@
 
   // ------------------------------------------------------------ 전체 회차 기록 (기간 선택과 무관)
   function renderAllTime() {
-    $('part-sub').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 기준이며, 위의 기간 선택과 관계없습니다.`;
+    $('records-note').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 회차 기준입니다.`;
 
     const years = DATA.yearly;
     const first = years[0];
@@ -1177,7 +1223,6 @@
     renderOddEven();
     renderSumRange();
     renderTables();
-    renderMine();
   }
 
   const seg = $('win-seg');
@@ -1205,23 +1250,61 @@
   machine.addEventListener('click', playMachine);
   playMachine();
 
+  // ------------------------------------------------------------ 탭
+  // 숨겨진 탭의 차트는 폭이 0이라 그리지 않으므로, 탭을 열 때 그 탭의 차트를 지금 폭에 맞게 그린다
+  const TAB_CHARTS = {
+    stats: () => { renderFreq(); renderOddEven(); renderSumRange(); },
+    mine: () => renderMineChart(),
+    records: () => { renderTrend(); renderPairChart(); },
+  };
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  let currentTab = 'stats';
+
+  function showTab(key, { focus = false } = {}) {
+    currentTab = key;
+    hideTip();
+    for (const tab of tabs) {
+      const on = tab.dataset.tab === key;
+      tab.setAttribute('aria-selected', String(on));
+      tab.tabIndex = on ? 0 : -1;  // 탭 목록 안에서는 방향키로 이동한다
+      $(tab.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) tab.focus();
+    }
+    TAB_CHARTS[key]();
+    // 주소로 특정 탭을 공유할 수 있게 (기본 탭은 주소를 깔끔하게 둔다)
+    history.replaceState(null, '', key === 'stats' ? location.pathname + location.search : `#${key}`);
+  }
+  window.addEventListener('hashchange', () => {
+    const key = location.hash.slice(1);
+    if (TAB_CHARTS[key] && key !== currentTab) showTab(key);
+  });
+
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+    tab.addEventListener('keydown', (e) => {
+      const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      showTab(tabs[(next + tabs.length) % tabs.length].dataset.tab, { focus: true });
+    });
+  });
+
   renderStatic();
   renderScoped();
   renderAllTime();
+  renderMineChart();
+  const startTab = location.hash.slice(1);
+  showTab(TAB_CHARTS[startTab] ? startTab : 'stats');
 
-  // 화면 폭이 바뀌면 차트를 다시 그린다
-  let lastWidth = $('freq-chart').clientWidth;
+  // 화면 폭이 바뀌면 지금 보이는 탭의 차트를 다시 그린다
+  const main = document.querySelector('main');
+  let lastWidth = main.clientWidth;
   new ResizeObserver(() => {
-    const width = $('freq-chart').clientWidth;
-    if (width === lastWidth) return;
-    lastWidth = width;
+    if (main.clientWidth === lastWidth) return;
+    lastWidth = main.clientWidth;
     hideTip();
-    renderFreq();
-    renderOddEven();
-    renderSumRange();
-    renderTrend();
-    renderPairChart();
-  }).observe($('freq-chart'));
+    TAB_CHARTS[currentTab]();
+  }).observe(main);
 })();
 </script>
 </body>
