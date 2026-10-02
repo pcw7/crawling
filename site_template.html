@@ -542,7 +542,8 @@
       ['가장 많이 나온 번호', listOf(numbersWith(max)), `${fmt(max)}회 · 기대값 ${expected}회`],
       ['가장 적게 나온 번호', listOf(numbersWith(min)), `${fmt(min)}회 · 기대값 ${expected}회`],
       ['가장 흔한 홀짝 조합', `${k}:${6 - k}`, `${pct(w.oddEven[k])} · 이론 ${pct(DATA.oddEvenTheory[k])}`],
-      ['번호별 차이', random ? '우연 범위' : '편차 큼', `카이제곱 ${w.chi2.toFixed(1)} · 기준 ${DATA.chi2Critical}`],
+      ['특정 번호 쏠림', random ? '없음' : '있음',
+        `카이제곱 ${w.chi2.toFixed(1)} · 기준 ${DATA.chi2Critical} ${random ? '미만' : '이상'}`],
     ];
     const box = $('tiles');
     box.textContent = '';
