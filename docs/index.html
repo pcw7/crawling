@@ -62,7 +62,6 @@
   h2 { font-size: 18px; line-height: 1.4; margin: 0; }
   .lede { color: var(--ink-2); margin: 0 0 20px; }
   .sub { color: var(--ink-2); font-size: 14px; margin: 4px 0 0; }
-  .note { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
 
   .card {
     background: var(--surface);
@@ -182,10 +181,6 @@
   .gap-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
   .gap-list strong { color: var(--ink); }
 
-  .conclusion p { margin: 8px 0 0; color: var(--ink-2); }
-  .foot { font-size: 13px; color: var(--muted); margin-top: 28px; line-height: 1.7; }
-  .foot p { margin: 0 0 4px; }
-  .foot a { color: var(--ink-2); }
 
   @media (max-width: 760px) {
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -260,19 +255,7 @@
     <h2>오래 안 나온 번호</h2>
     <p class="sub" id="gap-sub"></p>
     <ol class="gap-list" id="gap-list"></ol>
-    <p class="note">오래 안 나왔다고 다음 회차에 나올 확률이 높아지지는 않습니다. 매 회차 각 번호가 당첨번호로 뽑힐 확률은 똑같이 6/45입니다.</p>
   </section>
-
-  <section class="card conclusion">
-    <h2>결론: 로또는 무작위입니다</h2>
-    <p id="conclusion"></p>
-  </section>
-
-  <footer class="foot">
-    <p>이 페이지는 동행복권과 관련 없는 개인 학습 프로젝트입니다. 당첨번호 출처: 동행복권(dhlottery.co.kr)</p>
-    <p>통계는 학습과 재미를 위한 것이며, 당첨번호 예측이나 복권 구매 권유를 위한 것이 아닙니다.</p>
-    <p><span id="updated"></span> · <a href="https://github.com/pcw7/lotto-stats">소스 코드 (GitHub)</a></p>
-  </footer>
 </main>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>
@@ -679,16 +662,6 @@
         htmlEl('strong', '', `${g}회째`, text);
         text.append(' 안 나옴');
       });
-
-    const spread = Math.max(...all.freq) - Math.min(...all.freq);
-    $('conclusion').textContent = all.chi2 < DATA.chi2Critical
-      ? `전체 ${fmt(all.draws)}회 동안 가장 많이 나온 번호와 가장 적게 나온 번호는 ${spread}회 차이가 납니다. ` +
-        `커 보이지만 카이제곱 검정 값(${all.chi2.toFixed(1)})이 기준값(${DATA.chi2Critical})보다 작아서, 무작위 추첨에서 자연스럽게 생기는 정도의 차이입니다. ` +
-        '홀짝 조합 비율도 이론 확률과 거의 같습니다. 매 회차 추첨은 이전 결과와 상관없이 독립적으로 이루어지므로, 과거 출현 빈도로 다음 당첨번호를 예측할 수는 없습니다.'
-      : `전체 ${fmt(all.draws)}회 동안 번호별 출현 횟수 차이가 카이제곱 기준값(${DATA.chi2Critical})을 넘었습니다(${all.chi2.toFixed(1)}). ` +
-        '다만 이것만으로 특정 번호가 더 잘 나온다고 할 수는 없으며, 매 회차 추첨은 이전 결과와 상관없이 독립적으로 이루어집니다.';
-
-    $('updated').textContent = `데이터 기준 ${DATA.last.no}회 (${DATA.last.date} 추첨)`;
   }
 
   // ------------------------------------------------------------ 기간 선택
