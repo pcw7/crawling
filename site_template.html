@@ -135,6 +135,9 @@
     .machine.play .m-knob, .machine.play .m-balls, .machine.play .m-out { animation: none; }
   }
   .plus { color: var(--muted); font-weight: 600; margin: 0 2px; }
+  .prize { display: flex; gap: 24px; margin: 0 0 0 auto; }
+  .prize dt { font-size: 12px; color: var(--muted); }
+  .prize dd { margin: 0; font-size: 16px; font-weight: 650; color: var(--ink); }
 
   /* 기간 필터 */
   .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 28px 0 12px; }
@@ -229,6 +232,7 @@
 
   @media (max-width: 760px) {
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .prize { margin-left: 0; }
   }
   @media (max-width: 520px) {
     h1 { font-size: 24px; }
@@ -270,6 +274,7 @@
     <div class="card latest">
       <div class="latest-label" id="latest-label"></div>
       <div class="balls" id="latest-balls"></div>
+      <dl class="prize" id="latest-prize"></dl>
     </div>
   </header>
 
@@ -341,6 +346,14 @@
   const fmt = (n) => n.toLocaleString('ko-KR');
   const pct = (x) => (x * 100).toFixed(1) + '%';
   const signed = (d) => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1);
+
+  // 2592525282 → "25억 9,253만 원" (만 원 단위에서 반올림)
+  function won(amount) {
+    const man = Math.round(amount / 10000);
+    const eok = Math.floor(man / 10000);
+    const rest = man % 10000;
+    return [eok && `${fmt(eok)}억`, rest && `${fmt(rest)}만`].filter(Boolean).join(' ') + ' 원';
+  }
 
   function svgEl(tag, attrs, parent) {
     const node = document.createElementNS(SVG_NS, tag);
@@ -717,6 +730,17 @@
     for (const n of DATA.last.numbers) ball(n, balls);
     htmlEl('span', 'plus', '+', balls).setAttribute('aria-label', '보너스');
     ball(DATA.last.bonus, balls);
+
+    const prize = $('latest-prize');
+    const winners = DATA.last.firstWinners;
+    const prizeItems = winners > 0
+      ? [['1등 당첨자', `${fmt(winners)}명`], ['1인당 당첨금', won(DATA.last.firstPrize)]]
+      : [['1등 당첨자', '없음 (다음 회차로 이월)']];
+    for (const [term, value] of prizeItems) {
+      const item = htmlEl('div', '', null, prize);
+      htmlEl('dt', '', term, item);
+      htmlEl('dd', '', value, item);
+    }
 
     $('gap-sub').textContent = `${DATA.last.no}회 기준으로 가장 오랫동안 당첨번호에 나오지 않은 번호입니다.`;
     const gapList = $('gap-list');

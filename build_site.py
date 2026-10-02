@@ -47,6 +47,8 @@ def main():
             "date": last.draw_date,
             "numbers": [int(last[col]) for col in NUM_COLS],
             "bonus": int(last.bonus),
+            "firstWinners": int(last.first_winners),  # 1등 당첨자 수
+            "firstPrize": int(last.first_prize),      # 1등 1인당 당첨금(원)
         },
         "chi2Critical": CHI2_CRITICAL,
         "oddEvenTheory": [round(x, 4) for x in theory],
