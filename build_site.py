@@ -5,6 +5,7 @@ site_template.html의 __DATA__ 자리에 JSON으로 넣고, GitHub Pages가 보�
 원본 당첨번호 전체는 넣지 않고 집계 결과만 넣는다.
 """
 import json
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -56,7 +57,13 @@ def main():
         "windows": {key: summarize(df if n is None else df.tail(n)) for key, n in WINDOWS.items()},
     }
 
+    # 검색 결과와 공유 미리보기 카드에 보일 설명 (최신 회차가 바뀌면 함께 바뀐다)
+    numbers = ", ".join(str(n) for n in data["last"]["numbers"])
+    description = (f"최신 {data['last']['no']}회 당첨번호 {numbers} + 보너스 {data['last']['bonus']}. "
+                   f"1회부터 {data['last']['no']}회까지 번호별 출현 빈도와 홀짝 조합을 분석했습니다.")
+
     html = TEMPLATE_FILE.read_text(encoding="utf-8")
+    html = html.replace("__DESCRIPTION__", escape(description))
     html = html.replace("__DATA__", json.dumps(data, ensure_ascii=False))
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(html, encoding="utf-8")
