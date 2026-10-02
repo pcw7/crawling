@@ -92,7 +92,6 @@
 
   /* 기간 필터 */
   .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 28px 0 12px; }
-  .filter-label { font-size: 14px; color: var(--ink-2); }
   .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
   .seg button {
     border: 0; background: transparent; color: var(--ink-2);
@@ -205,8 +204,7 @@
   </header>
 
   <div class="filter">
-    <span class="filter-label" id="win-label">분석 기간</span>
-    <div class="seg" id="win-seg" role="group" aria-labelledby="win-label"></div>
+    <div class="seg" id="win-seg" role="group" aria-label="분석 기간"></div>
   </div>
 
   <section class="tiles" id="tiles" aria-label="요약"></section>
