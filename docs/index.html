@@ -244,6 +244,16 @@
   .gap-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
   .gap-list strong { color: var(--ink); }
 
+  /* 전체 회차 기록 구역 (기간 선택과 무관) */
+  .part { margin: 40px 0 16px; padding-top: 28px; border-top: 1px solid var(--grid); }
+  .part h2 { font-size: 22px; }
+
+  /* 연도별 추이: 같은 가로축(연도)을 쓰는 작은 차트 3개 */
+  .mini + .mini { margin-top: 20px; }
+  .mini h3 { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 2px; }
+  .mini .chart { height: 138px; }
+  .mini:last-child .chart { height: 154px; }
+
 
   @media (max-width: 760px) {
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -344,11 +354,28 @@
     <p class="sub" id="gap-sub"></p>
     <ol class="gap-list" id="gap-list"></ol>
   </section>
+
+  <div class="part">
+    <h2>전체 회차 기록</h2>
+    <p class="sub" id="part-sub"></p>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>연도별 추이</h2>
+        <p class="sub" id="trend-sub"></p>
+      </div>
+      <button type="button" class="ghost" data-table="trend-table" aria-expanded="false">표로 보기</button>
+    </div>
+    <div id="trend"></div>
+    <div class="table-wrap" id="trend-table" hidden></div>
+  </section>
 </main>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
-<script id="data" type="application/json">{"first": {"no": 1, "date": "2002-12-07"}, "last": {"no": 1243, "date": "2026-09-26", "numbers": [9, 18, 24, 38, 43, 44], "bonus": 35, "firstWinners": 12, "firstPrize": 2592525282}, "chi2Critical": 60.48, "oddEvenTheory": [0.0092, 0.0744, 0.2272, 0.3348, 0.2511, 0.0909, 0.0124], "gap": [9, 1, 13, 1, 30, 8, 2, 13, 0, 1, 3, 7, 2, 12, 8, 1, 17, 0, 3, 3, 7, 4, 2, 0, 10, 17, 19, 13, 7, 15, 1, 4, 4, 6, 9, 4, 6, 0, 8, 6, 1, 5, 0, 0, 19], "windows": {"all": {"draws": 1243, "freq": [170, 157, 172, 163, 153, 166, 171, 158, 137, 163, 168, 180, 183, 172, 170, 170, 171, 179, 171, 172, 167, 146, 149, 168, 153, 165, 181, 157, 156, 158, 171, 146, 175, 186, 163, 165, 174, 173, 168, 174, 151, 158, 167, 166, 175], "oddEven": [0.0137, 0.0668, 0.2261, 0.3331, 0.2655, 0.0796, 0.0153], "chi2": 29.3}, "100": {"draws": 100, "freq": [12, 12, 17, 12, 9, 14, 15, 14, 16, 10, 13, 13, 18, 7, 18, 17, 11, 14, 14, 13, 10, 11, 13, 16, 13, 12, 20, 15, 13, 12, 17, 13, 11, 10, 13, 13, 16, 18, 15, 12, 11, 13, 10, 13, 11], "oddEven": [0.02, 0.07, 0.23, 0.21, 0.36, 0.1, 0.01], "chi2": 24.3}, "50": {"draws": 50, "freq": [8, 7, 7, 6, 4, 5, 6, 6, 6, 6, 5, 5, 10, 3, 11, 8, 5, 8, 6, 7, 4, 6, 5, 9, 6, 5, 10, 8, 6, 7, 11, 7, 7, 6, 6, 7, 6, 10, 6, 5, 7, 7, 6, 8, 6], "oddEven": [0.0, 0.1, 0.26, 0.22, 0.32, 0.08, 0.02], "chi2": 21.0}}}</script>
+<script id="data" type="application/json">{"first": {"no": 1, "date": "2002-12-07"}, "last": {"no": 1243, "date": "2026-09-26", "numbers": [9, 18, 24, 38, 43, 44], "bonus": 35, "firstWinners": 12, "firstPrize": 2592525282}, "chi2Critical": 60.48, "oddEvenTheory": [0.0092, 0.0744, 0.2272, 0.3348, 0.2511, 0.0909, 0.0124], "gap": [9, 1, 13, 1, 30, 8, 2, 13, 0, 1, 3, 7, 2, 12, 8, 1, 17, 0, 3, 3, 7, 4, 2, 0, 10, 17, 19, 13, 7, 15, 1, 4, 4, 6, 9, 4, 6, 0, 8, 6, 1, 5, 0, 0, 19], "windows": {"all": {"draws": 1243, "freq": [170, 157, 172, 163, 153, 166, 171, 158, 137, 163, 168, 180, 183, 172, 170, 170, 171, 179, 171, 172, 167, 146, 149, 168, 153, 165, 181, 157, 156, 158, 171, 146, 175, 186, 163, 165, 174, 173, 168, 174, 151, 158, 167, 166, 175], "oddEven": [0.0137, 0.0668, 0.2261, 0.3331, 0.2655, 0.0796, 0.0153], "chi2": 29.3}, "100": {"draws": 100, "freq": [12, 12, 17, 12, 9, 14, 15, 14, 16, 10, 13, 13, 18, 7, 18, 17, 11, 14, 14, 13, 10, 11, 13, 16, 13, 12, 20, 15, 13, 12, 17, 13, 11, 10, 13, 13, 16, 18, 15, 12, 11, 13, 10, 13, 11], "oddEven": [0.02, 0.07, 0.23, 0.21, 0.36, 0.1, 0.01], "chi2": 24.3}, "50": {"draws": 50, "freq": [8, 7, 7, 6, 4, 5, 6, 6, 6, 6, 5, 5, 10, 3, 11, 8, 5, 8, 6, 7, 4, 6, 5, 9, 6, 5, 10, 8, 6, 7, 11, 7, 7, 6, 6, 7, 6, 10, 6, 5, 7, 7, 6, 8, 6], "oddEven": [0.0, 0.1, 0.26, 0.22, 0.32, 0.08, 0.02], "chi2": 21.0}}, "yearly": [{"year": 2002, "draws": 4, "winners": 0.5, "prize": 2001003400, "sales": 4646715500}, {"year": 2003, "draws": 52, "winners": 4.02, "prize": 7296607950, "sales": 73136611576}, {"year": 2004, "draws": 52, "winners": 4.85, "prize": 4449644243, "sales": 63082585134}, {"year": 2005, "draws": 53, "winners": 6.43, "prize": 2337672556, "sales": 51924867188}, {"year": 2006, "draws": 52, "winners": 5.81, "prize": 2477798749, "sales": 47529296634}, {"year": 2007, "draws": 52, "winners": 5.81, "prize": 2398778454, "sales": 43550423250}, {"year": 2008, "draws": 52, "winners": 5.48, "prize": 2628893655, "sales": 43615730826}, {"year": 2009, "draws": 52, "winners": 5.67, "prize": 2411724960, "sales": 45181136769}, {"year": 2010, "draws": 52, "winners": 5.6, "prize": 2932931827, "sales": 46551576519}, {"year": 2011, "draws": 53, "winners": 6.91, "prize": 2300512047, "sales": 53056016584}, {"year": 2012, "draws": 52, "winners": 6.65, "prize": 2490390423, "sales": 54483828769}, {"year": 2013, "draws": 52, "winners": 7.75, "prize": 2660993899, "sales": 57343982115}, {"year": 2014, "draws": 52, "winners": 7.52, "prize": 2290456497, "sales": 58482017750}, {"year": 2015, "draws": 52, "winners": 7.56, "prize": 2325697848, "sales": 62419556769}, {"year": 2016, "draws": 53, "winners": 8.64, "prize": 2214066163, "sales": 67916671150}, {"year": 2017, "draws": 52, "winners": 9.19, "prize": 2354143504, "sales": 72976702076}, {"year": 2018, "draws": 52, "winners": 9.31, "prize": 2328038408, "sales": 76165627442}, {"year": 2019, "draws": 52, "winners": 9.75, "prize": 2396548868, "sales": 82849318865}, {"year": 2020, "draws": 52, "winners": 10.1, "prize": 2461556915, "sales": 90558172692}, {"year": 2021, "draws": 52, "winners": 10.85, "prize": 2455187227, "sales": 98361471576}, {"year": 2022, "draws": 53, "winners": 12.6, "prize": 2554471515, "sales": 104105883018}, {"year": 2023, "draws": 52, "winners": 12.42, "prize": 2368756091, "sales": 108626514942}, {"year": 2024, "draws": 52, "winners": 14.67, "prize": 2100664332, "sales": 114020230480}, {"year": 2025, "draws": 52, "winners": 15.62, "prize": 2061324936, "sales": 119233559461}, {"year": 2026, "draws": 39, "winners": 15.03, "prize": 2185946342, "sales": 121877756000}]}</script>
 <script>
 (() => {
   const DATA = JSON.parse(document.getElementById('data').textContent);
@@ -445,7 +472,7 @@
     if (label) htmlEl('div', 'tip-label', label, tip);
     for (const row of rows) {
       const line = htmlEl('div', 'tip-row', null, tip);
-      htmlEl('span', 'tip-key', null, line).style.background = `var(${row.color})`;
+      if (row.color) htmlEl('span', 'tip-key', null, line).style.background = `var(${row.color})`;
       htmlEl('strong', '', row.value, line);
       htmlEl('span', 'name', row.name, line);
     }
@@ -772,6 +799,108 @@
       });
   }
 
+  // ------------------------------------------------------------ 연도별 추이
+  // 축 눈금용 짧은 금액: 1억 이상은 "억", 그 아래는 "만" 단위
+  function wonShort(v) {
+    if (v >= 1e8) return `${fmt(Math.round(v / 1e8))}억`;
+    if (v >= 1e4) return `${fmt(Math.round(v / 1e4))}만`;
+    return fmt(v);
+  }
+
+  const TREND_METRICS = [
+    { key: 'prize', title: '1등 1인당 평균 당첨금', tick: wonShort, value: won },
+    { key: 'winners', title: '회당 평균 1등 당첨자 수', tick: (v) => `${fmt(v)}명`, value: (v) => `${v.toFixed(1)}명` },
+    { key: 'sales', title: '회당 평균 판매액', tick: wonShort, value: won },
+  ];
+
+  const isInProgress = (d) => d === DATA.yearly[DATA.yearly.length - 1] && d.draws < 52;
+  const yearLabel = (d) => `${d.year}년 · ${d.draws}회 추첨${isInProgress(d) ? ' (진행 중)' : ''}`;
+
+  // 연도별 막대 차트 하나. showYears가 참이면 아래에 연도를 표시한다.
+  function drawTrendChart(box, metric, showYears) {
+    const years = DATA.yearly;
+    const values = years.map((d) => d[metric.key]);
+    const W = box.clientWidth;
+    const H = box.clientHeight;
+    const m = { top: 18, right: 8, bottom: showYears ? 26 : 12, left: 52 };
+    const pw = W - m.left - m.right;
+    const ph = H - m.top - m.bottom;
+    const ticks = niceTicks(Math.max(...values));
+    const yMax = ticks[ticks.length - 1];
+    const y = (v) => m.top + ph - (v / yMax) * ph;
+    const band = pw / years.length;
+    const bw = Math.min(24, Math.max(2, band * 0.6));
+
+    const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'group',
+      'aria-label': `연도별 ${metric.title}` }, box);
+    for (const t of ticks) {
+      svgEl('line', { x1: m.left, x2: m.left + pw, y1: y(t), y2: y(t), class: t === 0 ? 'axis' : 'grid' }, svg);
+      svgEl('text', { x: m.left - 8, y: y(t), class: 'tick', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, svg)
+        .textContent = metric.tick(t);
+    }
+    const bars = values.map((v, i) => svgEl('path', {
+      d: colPath(m.left + band * (i + 0.5) - bw / 2, y(v), bw, y(0) - y(v)), class: 'bar' }, svg));
+
+    // 가장 최근 연도 값만 막대 끝에 표시
+    const li = values.length - 1;
+    svgEl('text', { x: m.left + band * (li + 0.5) + bw / 2, y: y(values[li]) - 6, class: 'val', 'text-anchor': 'end' }, svg)
+      .textContent = metric.key === 'winners' ? `${values[li].toFixed(1)}명` : wonShort(values[li]);
+
+    if (showYears) {
+      const step = band >= 34 ? 1 : band >= 17 ? 2 : 5;
+      years.forEach((d, i) => {
+        if (d.year % step !== 0) return;
+        svgEl('text', { x: m.left + band * (i + 0.5), y: H - 8, class: 'tick', 'text-anchor': 'middle' }, svg)
+          .textContent = d.year;
+      });
+    }
+    return { svg, bars, values, y, m, band, ph };
+  }
+
+  function renderTrend() {
+    const box = $('trend');
+    box.textContent = '';
+    const charts = TREND_METRICS.map((metric, idx) => {
+      const wrap = htmlEl('div', 'mini', null, box);
+      htmlEl('h3', '', metric.title, wrap);
+      return drawTrendChart(htmlEl('div', 'chart', null, wrap), metric, idx === TREND_METRICS.length - 1);
+    });
+
+    // 어느 차트든 같은 연도에 마우스를 올리면 세 차트의 막대를 함께 강조하고 값을 한 툴팁에 모은다
+    charts.forEach((c, idx) => {
+      DATA.yearly.forEach((d, i) => {
+        const attrs = { x: c.m.left + c.band * i, y: c.m.top, width: c.band, height: c.ph, class: 'hit' };
+        if (idx === 0) {  // 키보드 이동은 첫 번째 차트에서만 (연도당 한 번)
+          Object.assign(attrs, { tabindex: 0, role: 'img',
+            'aria-label': `${yearLabel(d)}: ` + TREND_METRICS.map((mt) => `${mt.title} ${mt.value(d[mt.key])}`).join(', ') });
+        }
+        const hit = svgEl('rect', attrs, c.svg);
+        bindHover(hit, () => {
+          for (const o of charts) o.bars[i].classList.add('is-lift');
+          const r = c.svg.getBoundingClientRect();
+          showTip(hit, r.left + c.m.left + c.band * (i + 0.5), r.top + c.y(c.values[i]) - 6, {
+            label: yearLabel(d),
+            rows: TREND_METRICS.map((mt) => ({ value: mt.value(d[mt.key]), name: mt.title })),
+          }, () => { for (const o of charts) o.bars[i].classList.remove('is-lift'); });
+        });
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ 전체 회차 기록 (기간 선택과 무관)
+  function renderAllTime() {
+    $('part-sub').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 기준이며, 위의 기간 선택과 관계없습니다.`;
+
+    const years = DATA.yearly;
+    const first = years[0];
+    const latest = years[years.length - 1];
+    $('trend-sub').textContent = `연도마다 회당 평균값입니다. ${first.year}년은 ${first.draws}회만 추첨했고, ` +
+      `${latest.year}년은 ${isInProgress(latest) ? '진행 중입니다' : `${latest.draws}회 추첨했습니다`}.`;
+    buildTable($('trend-table'), ['연도', '추첨', ...TREND_METRICS.map((mt) => mt.title)],
+      years.map((d) => [`${d.year}년`, `${d.draws}회`, ...TREND_METRICS.map((mt) => mt.value(d[mt.key]))]));
+    renderTrend();
+  }
+
   // ------------------------------------------------------------ 기간 선택
   function renderScoped() {
     hideTip();
@@ -813,6 +942,7 @@
 
   renderStatic();
   renderScoped();
+  renderAllTime();
 
   // 화면 폭이 바뀌면 차트를 다시 그린다
   let lastWidth = $('freq-chart').clientWidth;
@@ -823,6 +953,7 @@
     hideTip();
     renderFreq();
     renderOddEven();
+    renderTrend();
   }).observe($('freq-chart'));
 })();
 </script>

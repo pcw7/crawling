@@ -11,7 +11,8 @@ from pathlib import Path
 import pandas as pd
 
 from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
-                     draws_since_last_seen, number_frequency, odd_even_ratio)
+                     draws_since_last_seen, number_frequency, odd_even_ratio,
+                     yearly_trend)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATE_FILE = BASE_DIR / "site_template.html"
@@ -55,6 +56,7 @@ def main():
         "oddEvenTheory": [round(x, 4) for x in theory],
         "gap": draws_since_last_seen(df).astype(int).tolist(),
         "windows": {key: summarize(df if n is None else df.tail(n)) for key, n in WINDOWS.items()},
+        "yearly": yearly_trend(df),
     }
 
     # 검색 결과와 공유 미리보기 카드에 보일 설명 (최신 회차가 바뀌면 함께 바뀐다)

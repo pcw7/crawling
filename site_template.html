@@ -244,6 +244,16 @@
   .gap-list li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
   .gap-list strong { color: var(--ink); }
 
+  /* 전체 회차 기록 구역 (기간 선택과 무관) */
+  .part { margin: 40px 0 16px; padding-top: 28px; border-top: 1px solid var(--grid); }
+  .part h2 { font-size: 22px; }
+
+  /* 연도별 추이: 같은 가로축(연도)을 쓰는 작은 차트 3개 */
+  .mini + .mini { margin-top: 20px; }
+  .mini h3 { font-size: 14px; font-weight: 600; color: var(--ink-2); margin: 0 0 2px; }
+  .mini .chart { height: 138px; }
+  .mini:last-child .chart { height: 154px; }
+
 
   @media (max-width: 760px) {
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -343,6 +353,23 @@
     <h2>오래 안 나온 번호</h2>
     <p class="sub" id="gap-sub"></p>
     <ol class="gap-list" id="gap-list"></ol>
+  </section>
+
+  <div class="part">
+    <h2>전체 회차 기록</h2>
+    <p class="sub" id="part-sub"></p>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>연도별 추이</h2>
+        <p class="sub" id="trend-sub"></p>
+      </div>
+      <button type="button" class="ghost" data-table="trend-table" aria-expanded="false">표로 보기</button>
+    </div>
+    <div id="trend"></div>
+    <div class="table-wrap" id="trend-table" hidden></div>
   </section>
 </main>
 
@@ -445,7 +472,7 @@
     if (label) htmlEl('div', 'tip-label', label, tip);
     for (const row of rows) {
       const line = htmlEl('div', 'tip-row', null, tip);
-      htmlEl('span', 'tip-key', null, line).style.background = `var(${row.color})`;
+      if (row.color) htmlEl('span', 'tip-key', null, line).style.background = `var(${row.color})`;
       htmlEl('strong', '', row.value, line);
       htmlEl('span', 'name', row.name, line);
     }
@@ -772,6 +799,108 @@
       });
   }
 
+  // ------------------------------------------------------------ 연도별 추이
+  // 축 눈금용 짧은 금액: 1억 이상은 "억", 그 아래는 "만" 단위
+  function wonShort(v) {
+    if (v >= 1e8) return `${fmt(Math.round(v / 1e8))}억`;
+    if (v >= 1e4) return `${fmt(Math.round(v / 1e4))}만`;
+    return fmt(v);
+  }
+
+  const TREND_METRICS = [
+    { key: 'prize', title: '1등 1인당 평균 당첨금', tick: wonShort, value: won },
+    { key: 'winners', title: '회당 평균 1등 당첨자 수', tick: (v) => `${fmt(v)}명`, value: (v) => `${v.toFixed(1)}명` },
+    { key: 'sales', title: '회당 평균 판매액', tick: wonShort, value: won },
+  ];
+
+  const isInProgress = (d) => d === DATA.yearly[DATA.yearly.length - 1] && d.draws < 52;
+  const yearLabel = (d) => `${d.year}년 · ${d.draws}회 추첨${isInProgress(d) ? ' (진행 중)' : ''}`;
+
+  // 연도별 막대 차트 하나. showYears가 참이면 아래에 연도를 표시한다.
+  function drawTrendChart(box, metric, showYears) {
+    const years = DATA.yearly;
+    const values = years.map((d) => d[metric.key]);
+    const W = box.clientWidth;
+    const H = box.clientHeight;
+    const m = { top: 18, right: 8, bottom: showYears ? 26 : 12, left: 52 };
+    const pw = W - m.left - m.right;
+    const ph = H - m.top - m.bottom;
+    const ticks = niceTicks(Math.max(...values));
+    const yMax = ticks[ticks.length - 1];
+    const y = (v) => m.top + ph - (v / yMax) * ph;
+    const band = pw / years.length;
+    const bw = Math.min(24, Math.max(2, band * 0.6));
+
+    const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'group',
+      'aria-label': `연도별 ${metric.title}` }, box);
+    for (const t of ticks) {
+      svgEl('line', { x1: m.left, x2: m.left + pw, y1: y(t), y2: y(t), class: t === 0 ? 'axis' : 'grid' }, svg);
+      svgEl('text', { x: m.left - 8, y: y(t), class: 'tick', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, svg)
+        .textContent = metric.tick(t);
+    }
+    const bars = values.map((v, i) => svgEl('path', {
+      d: colPath(m.left + band * (i + 0.5) - bw / 2, y(v), bw, y(0) - y(v)), class: 'bar' }, svg));
+
+    // 가장 최근 연도 값만 막대 끝에 표시
+    const li = values.length - 1;
+    svgEl('text', { x: m.left + band * (li + 0.5) + bw / 2, y: y(values[li]) - 6, class: 'val', 'text-anchor': 'end' }, svg)
+      .textContent = metric.key === 'winners' ? `${values[li].toFixed(1)}명` : wonShort(values[li]);
+
+    if (showYears) {
+      const step = band >= 34 ? 1 : band >= 17 ? 2 : 5;
+      years.forEach((d, i) => {
+        if (d.year % step !== 0) return;
+        svgEl('text', { x: m.left + band * (i + 0.5), y: H - 8, class: 'tick', 'text-anchor': 'middle' }, svg)
+          .textContent = d.year;
+      });
+    }
+    return { svg, bars, values, y, m, band, ph };
+  }
+
+  function renderTrend() {
+    const box = $('trend');
+    box.textContent = '';
+    const charts = TREND_METRICS.map((metric, idx) => {
+      const wrap = htmlEl('div', 'mini', null, box);
+      htmlEl('h3', '', metric.title, wrap);
+      return drawTrendChart(htmlEl('div', 'chart', null, wrap), metric, idx === TREND_METRICS.length - 1);
+    });
+
+    // 어느 차트든 같은 연도에 마우스를 올리면 세 차트의 막대를 함께 강조하고 값을 한 툴팁에 모은다
+    charts.forEach((c, idx) => {
+      DATA.yearly.forEach((d, i) => {
+        const attrs = { x: c.m.left + c.band * i, y: c.m.top, width: c.band, height: c.ph, class: 'hit' };
+        if (idx === 0) {  // 키보드 이동은 첫 번째 차트에서만 (연도당 한 번)
+          Object.assign(attrs, { tabindex: 0, role: 'img',
+            'aria-label': `${yearLabel(d)}: ` + TREND_METRICS.map((mt) => `${mt.title} ${mt.value(d[mt.key])}`).join(', ') });
+        }
+        const hit = svgEl('rect', attrs, c.svg);
+        bindHover(hit, () => {
+          for (const o of charts) o.bars[i].classList.add('is-lift');
+          const r = c.svg.getBoundingClientRect();
+          showTip(hit, r.left + c.m.left + c.band * (i + 0.5), r.top + c.y(c.values[i]) - 6, {
+            label: yearLabel(d),
+            rows: TREND_METRICS.map((mt) => ({ value: mt.value(d[mt.key]), name: mt.title })),
+          }, () => { for (const o of charts) o.bars[i].classList.remove('is-lift'); });
+        });
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ 전체 회차 기록 (기간 선택과 무관)
+  function renderAllTime() {
+    $('part-sub').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 기준이며, 위의 기간 선택과 관계없습니다.`;
+
+    const years = DATA.yearly;
+    const first = years[0];
+    const latest = years[years.length - 1];
+    $('trend-sub').textContent = `연도마다 회당 평균값입니다. ${first.year}년은 ${first.draws}회만 추첨했고, ` +
+      `${latest.year}년은 ${isInProgress(latest) ? '진행 중입니다' : `${latest.draws}회 추첨했습니다`}.`;
+    buildTable($('trend-table'), ['연도', '추첨', ...TREND_METRICS.map((mt) => mt.title)],
+      years.map((d) => [`${d.year}년`, `${d.draws}회`, ...TREND_METRICS.map((mt) => mt.value(d[mt.key]))]));
+    renderTrend();
+  }
+
   // ------------------------------------------------------------ 기간 선택
   function renderScoped() {
     hideTip();
@@ -813,6 +942,7 @@
 
   renderStatic();
   renderScoped();
+  renderAllTime();
 
   // 화면 폭이 바뀌면 차트를 다시 그린다
   let lastWidth = $('freq-chart').clientWidth;
@@ -823,6 +953,7 @@
     hideTip();
     renderFreq();
     renderOddEven();
+    renderTrend();
   }).observe($('freq-chart'));
 })();
 </script>

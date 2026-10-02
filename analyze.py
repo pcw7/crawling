@@ -81,6 +81,22 @@ def draws_since_last_seen(df):
     return df["draw_no"].max() - last_seen
 
 
+def yearly_trend(df):
+    """연도별 회당 평균 1등 당첨자 수, 1등 1인당 평균 당첨금, 회당 평균 판매액."""
+    df = df.assign(year=df["draw_date"].str[:4].astype(int))
+    rows = []
+    for year, g in df.groupby("year"):
+        won = g[g["first_winners"] > 0]  # 1등이 없어 이월된 회차는 당첨금 평균에서 뺀다
+        rows.append({
+            "year": int(year),
+            "draws": len(g),
+            "winners": round(float(g["first_winners"].mean()), 2),
+            "prize": int(won["first_prize"].mean()) if len(won) else 0,
+            "sales": int(g["total_sales"].mean()),
+        })
+    return rows
+
+
 # ---------------------------------------------------------------- 차트
 
 def plot_frequency(freq, draw_range, path):
