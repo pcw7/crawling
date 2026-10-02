@@ -254,10 +254,18 @@
   .mini .chart { height: 138px; }
   .mini:last-child .chart { height: 154px; }
 
+  /* 역대 기록 */
+  .records { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+  .record { background: var(--page); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .record-label { font-size: 13px; color: var(--ink-2); }
+  .record-value { font-size: 22px; font-weight: 650; line-height: 1.3; margin-top: 4px; }
+  .record-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
 
   @media (max-width: 760px) {
     .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .prize { margin-left: 0; }
+    .records { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 520px) {
     h1 { font-size: 24px; }
@@ -266,6 +274,7 @@
     .card { padding: 16px; }
     .tile { padding: 14px; }
     .tile-value { font-size: 22px; }
+    .records { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -370,6 +379,11 @@
     </div>
     <div id="trend"></div>
     <div class="table-wrap" id="trend-table" hidden></div>
+  </section>
+
+  <section class="card">
+    <h2>역대 기록</h2>
+    <div class="records" id="records"></div>
   </section>
 </main>
 
@@ -887,6 +901,32 @@
     });
   }
 
+  // ------------------------------------------------------------ 역대 기록
+  function renderRecords() {
+    const r = DATA.records;
+    const when = (d) => `${d.no}회 · ${d.date}`;
+    const d = r.drought;
+    const items = [
+      ['1등 1인당 최고 당첨금', won(r.topPrize.prize), `${when(r.topPrize)} · 1등 ${fmt(r.topPrize.winners)}명`],
+      ['1등 최다 당첨자', `${fmt(r.mostWinners.winners)}명`,
+        `${when(r.mostWinners)} · 1인당 ${(r.mostWinners.prize / 1e8).toFixed(1)}억 원`],
+      ['1등 1인당 최저 당첨금', won(r.lowPrize.prize), `${when(r.lowPrize)} · 1등 ${fmt(r.lowPrize.winners)}명`],
+      ['최고 판매액', won(r.topSales.sales), when(r.topSales)],
+      ['1등 없이 이월된 회차', `${fmt(r.noWinner.count)}번`,
+        r.noWinner.last ? `마지막: ${when(r.noWinner.last)}` : '없음'],
+      ['최장 미출현', `${d.number}번 · ${fmt(d.length)}회 연속`,
+        `${d.from}~${d.to}회 동안 안 나옴${d.to === DATA.last.no ? ' (진행 중)' : ''}`],
+    ];
+    const box = $('records');
+    box.textContent = '';
+    for (const [label, value, sub] of items) {
+      const item = htmlEl('div', 'record', null, box);
+      htmlEl('div', 'record-label', label, item);
+      htmlEl('div', 'record-value', value, item);
+      htmlEl('div', 'record-sub', sub, item);
+    }
+  }
+
   // ------------------------------------------------------------ 전체 회차 기록 (기간 선택과 무관)
   function renderAllTime() {
     $('part-sub').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 기준이며, 위의 기간 선택과 관계없습니다.`;
@@ -899,6 +939,7 @@
     buildTable($('trend-table'), ['연도', '추첨', ...TREND_METRICS.map((mt) => mt.title)],
       years.map((d) => [`${d.year}년`, `${d.draws}회`, ...TREND_METRICS.map((mt) => mt.value(d[mt.key]))]));
     renderTrend();
+    renderRecords();
   }
 
   // ------------------------------------------------------------ 기간 선택

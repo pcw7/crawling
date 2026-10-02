@@ -97,6 +97,35 @@ def yearly_trend(df):
     return rows
 
 
+def records(df):
+    """역대 기록: 1등 당첨금·당첨자 수·판매액의 최고/최저, 이월 횟수, 번호별 최장 미출현 구간."""
+    won = df[df["first_winners"] > 0]
+    no_winner = df[df["first_winners"] == 0]
+
+    def draw(row):
+        return {"no": int(row.draw_no), "date": row.draw_date, "winners": int(row.first_winners),
+                "prize": int(row.first_prize), "sales": int(row.total_sales)}
+
+    # 번호마다 나온 회차 사이의 간격을 보고, 연속으로 안 나온 가장 긴 구간을 찾는다
+    last_no = int(df["draw_no"].max())
+    long = df.melt(id_vars="draw_no", value_vars=NUM_COLS, value_name="number")
+    drought = {"number": 0, "length": 0, "from": 0, "to": 0}
+    for number, g in long.groupby("number"):
+        seen = [0] + sorted(g["draw_no"].tolist()) + [last_no + 1]
+        for a, b in zip(seen, seen[1:]):
+            if b - a - 1 > drought["length"]:
+                drought = {"number": int(number), "length": b - a - 1, "from": a + 1, "to": b - 1}
+
+    return {
+        "topPrize": draw(won.loc[won["first_prize"].idxmax()]),
+        "lowPrize": draw(won.loc[won["first_prize"].idxmin()]),
+        "mostWinners": draw(df.loc[df["first_winners"].idxmax()]),
+        "topSales": draw(df.loc[df["total_sales"].idxmax()]),
+        "noWinner": {"count": len(no_winner), "last": draw(no_winner.iloc[-1]) if len(no_winner) else None},
+        "drought": drought,
+    }
+
+
 # ---------------------------------------------------------------- 차트
 
 def plot_frequency(freq, draw_range, path):
