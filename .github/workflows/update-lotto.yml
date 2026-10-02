@@ -52,9 +52,11 @@ jobs:
           fi
           python data_crypt.py encrypt
           LAST=$(python -c "import pandas as pd; print(pd.read_csv('data/lotto.csv').draw_no.max())")
+          # 작성자(author)는 레포 주인 계정(noreply 이메일)으로 해서 잔디에 반영되게 하고,
+          # 커밋한 주체(committer)는 봇으로 남겨 자동 커밋임을 알 수 있게 한다.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs lotto.csv.enc
-          git commit -m "로또 통계 페이지 갱신 (${LAST}회 기준)"
+          git commit --author="Parkchanwoo <58602643+pcw7@users.noreply.github.com>" -m "로또 통계 페이지 갱신 (${LAST}회 기준)"
           git pull --rebase
           git push
