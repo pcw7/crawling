@@ -1,6 +1,9 @@
-# 매주 로또 당첨번호를 수집해서 웹페이지(docs/lotto/index.html)를 갱신한다.
-# 새 회차가 있어 페이지가 바뀌었을 때만 커밋하고 푸시하며, 푸시되면 GitHub Pages가 다시 배포된다.
-# 수집 데이터(data/)는 레포에 올리지 않으므로 실행할 때마다 1회차부터 다시 수집한다. (약 3분)
+# 매주 로또 새 회차를 수집해서 웹페이지(docs/lotto/index.html)를 갱신한다.
+#
+# 동행복권은 해외(GitHub 서버) IP의 연속 요청을 막기 때문에 처음부터 다시 수집할 수 없다.
+# 그래서 지난 데이터를 암호화해서(lotto/lotto.csv.enc) 레포에 보관하고, 복호화한 뒤 새 회차만 받는다. (요청 1~2번)
+# 암호 키는 레포 Settings → Secrets의 LOTTO_DATA_KEY에 있다.
+# 새 회차가 있어 페이지가 바뀌었을 때만 커밋·푸시하며, 푸시되면 GitHub Pages가 다시 배포된다.
 name: 로또 통계 갱신
 
 on:
@@ -17,7 +20,9 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    env:
+      LOTTO_DATA_KEY: ${{ secrets.LOTTO_DATA_KEY }}
     steps:
       - uses: actions/checkout@v7
 
@@ -30,7 +35,10 @@ jobs:
       - name: 패키지 설치
         run: pip install -r lotto/requirements.txt
 
-      - name: 당첨번호 수집
+      - name: 지난 데이터 복호화
+        run: python lotto/data_crypt.py decrypt
+
+      - name: 새 회차 수집
         run: python lotto/collect.py
 
       - name: 웹페이지 생성
@@ -38,14 +46,15 @@ jobs:
 
       - name: 바뀐 내용 커밋
         run: |
-          git add docs
-          if git diff --cached --quiet; then
-            echo "바뀐 내용이 없어 커밋하지 않습니다."
+          if git diff --quiet -- docs; then
+            echo "새 회차가 없어 커밋하지 않습니다."
             exit 0
           fi
+          python lotto/data_crypt.py encrypt
           LAST=$(python -c "import pandas as pd; print(pd.read_csv('lotto/data/lotto.csv').draw_no.max())")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs lotto/lotto.csv.enc
           git commit -m "로또 통계 페이지 갱신 (${LAST}회 기준)"
           git pull --rebase
           git push
