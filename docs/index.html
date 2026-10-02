@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>crawling 프로젝트</title>
+<meta name="description" content="크롤링 연습 프로젝트 모음입니다.">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --border: rgba(11, 11, 11, 0.10);
+    --border-hover: rgba(11, 11, 11, 0.25);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --border: rgba(255, 255, 255, 0.10);
+      --border-hover: rgba(255, 255, 255, 0.30);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    word-break: keep-all;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: 28px; line-height: 1.3; margin: 0 0 8px; }
+  .lede { color: var(--ink-2); margin: 0 0 28px; }
+  .project {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; margin-bottom: 12px; transition: border-color 0.15s;
+  }
+  .project:hover, .project:focus-visible { border-color: var(--border-hover); }
+  .project-title { display: block; font-size: 18px; font-weight: 650; }
+  .project-desc { display: block; color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+  .project-go { display: block; color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .foot { font-size: 13px; color: var(--muted); margin-top: 28px; }
+  .foot a { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>crawling</h1>
+  <p class="lede">크롤링 연습 프로젝트 모음입니다. 수집 전에 robots.txt를 확인하고, 허용된 경로만 천천히 수집합니다.</p>
+
+  <a class="project" href="lotto/">
+    <span class="project-title">로또 6/45 번호 통계</span>
+    <span class="project-desc">동행복권 당첨번호를 수집해 번호별 출현 빈도와 홀짝 비율을 분석했습니다.</span>
+    <span class="project-go">보기 →</span>
+  </a>
+
+  <footer class="foot"><a href="https://github.com/pcw7/crawling">GitHub 레포</a></footer>
+</main>
+</body>
+</html>

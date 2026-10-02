@@ -3,15 +3,18 @@
 동행복권 사이트에서 1회차부터 최신 회차까지 당첨번호를 수집하고,
 번호별 출현 빈도와 홀짝 비율을 분석합니다.
 
+**웹페이지: https://pcw7.github.io/crawling/lotto/**
+
 ## 실행
 
 ```bash
 pip install -r requirements.txt
-python collect.py   # 당첨번호 수집 → data/lotto.csv
-python analyze.py   # 분석 결과 출력 + 차트 → output/
+python collect.py      # 당첨번호 수집 → data/lotto.csv
+python analyze.py      # 분석 결과 출력 + 차트 → output/
+python build_site.py   # 웹페이지 생성 → ../docs/lotto/index.html
 ```
 
-`collect.py`는 이미 저장된 회차를 건너뛰고 새 회차만 받아 옵니다. 매주 토요일 추첨이 끝난 뒤 다시 실행하면 됩니다.
+`collect.py`는 이미 저장된 회차를 건너뛰고 새 회차만 받아 옵니다. 매주 토요일 추첨이 끝난 뒤 다시 실행하고, `build_site.py`로 페이지를 만든 다음 푸시하면 웹페이지가 갱신됩니다.
 
 ## 결과 (1~1243회 기준)
 
@@ -30,6 +33,8 @@ python analyze.py   # 분석 결과 출력 + 차트 → output/
 |---|---|
 | `collect.py` | 동행복권에서 당첨번호를 수집해 CSV로 저장 |
 | `analyze.py` | 번호별 빈도, 홀짝 비율, 오래 안 나온 번호 분석 및 차트 생성 |
+| `build_site.py` | 기간별(전체, 최근 100회, 최근 50회) 집계 결과를 `site_template.html`에 넣어 웹페이지 생성. 원본 데이터는 넣지 않습니다 |
+| `site_template.html` | 웹페이지 틀 (HTML, CSS, 자바스크립트 차트) |
 | `data/lotto.csv` | 수집한 데이터 (회차, 추첨일, 번호 6개, 보너스, 1등 당첨자 수·당첨금, 총판매금액). 레포에는 포함하지 않으며 `collect.py`를 실행하면 생성됩니다 |
 | `output/*.png` | 분석 차트 |
 
