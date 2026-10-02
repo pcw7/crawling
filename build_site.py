@@ -1,7 +1,7 @@
 """분석 결과를 GitHub Pages용 웹페이지로 만든다.
 
 data/lotto.csv를 기간별(전체, 최근 100회, 최근 50회)로 집계해서
-site_template.html의 __DATA__ 자리에 JSON으로 넣고, 레포 루트의 docs/lotto/index.html로 저장한다.
+site_template.html의 __DATA__ 자리에 JSON으로 넣고, GitHub Pages가 보여주는 docs/index.html로 저장한다.
 원본 당첨번호 전체는 넣지 않고 집계 결과만 넣는다.
 """
 import json
@@ -14,7 +14,7 @@ from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
 
 BASE_DIR = Path(__file__).parent
 TEMPLATE_FILE = BASE_DIR / "site_template.html"
-OUT_FILE = BASE_DIR.parent / "docs" / "lotto" / "index.html"
+OUT_FILE = BASE_DIR / "docs" / "index.html"
 WINDOWS = {"all": None, "100": 100, "50": 50}  # 최근 N회 (None은 전체)
 
 
