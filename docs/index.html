@@ -851,9 +851,9 @@
 
     // [제목, 값, 보조 문구, 도움말] — 도움말이 있으면 제목 옆에 ? 버튼을 단다
     const tiles = [
-      ['가장 많이 나온 번호', listOf(numbersWith(max)), `${fmt(max)}회 · 기대값 ${expected}회`],
-      ['가장 적게 나온 번호', listOf(numbersWith(min)), `${fmt(min)}회 · 기대값 ${expected}회`],
-      ['가장 흔한 홀짝 조합', `${k}:${6 - k}`, `${pct(w.oddEven[k])} · 이론 ${pct(DATA.oddEvenTheory[k])}`],
+      ['가장 많이 나온 번호', listOf(numbersWith(max)), null, freqHelp(w, 'most')],
+      ['가장 적게 나온 번호', listOf(numbersWith(min)), null, freqHelp(w, 'least')],
+      ['가장 흔한 홀짝 조합', `${k}:${6 - k}`, null, oddEvenHelp(w)],
       ['특정 번호 쏠림', random ? '없음' : '있음', null, chiSquareHelp(w)],
     ];
     const box = $('tiles');
@@ -867,7 +867,57 @@
     }
   }
 
-  // '특정 번호 쏠림'이 무슨 뜻인지 풀어 쓴 설명 (기간마다 기대값과 카이제곱 값이 다르다)
+  // ------------------------------------------------------------ 요약 타일 설명 (기간마다 값이 다르다)
+  // 가장 많이/적게 나온 번호. kind: 'most' 또는 'least'
+  function freqHelp(w, kind) {
+    const expected = expectedOf(w);
+    const [from, to] = rangeOf(w);
+    const word = kind === 'most' ? '많이' : '적게';
+    const order = w.freq.map((f, i) => [i + 1, f])
+      .sort((a, b) => (kind === 'most' ? b[1] - a[1] : a[1] - b[1]) || a[0] - b[0]);
+    const target = order[0][1];
+    const firsts = order.filter(([, f]) => f === target).map(([n]) => n);
+    const nexts = order.filter(([, f]) => f !== target).slice(0, 2);
+    const diff = target - expected;
+    return [
+      ['strong', `${fmt(target)}회 · 기대값 ${expected.toFixed(1)}회`],
+      ['p', `${from}~${to}회 동안 당첨번호(보너스 제외)로 가장 ${word} 나온 번호는 ${firsts.join(', ')}번이며, ${fmt(target)}회 나왔습니다.`],
+      ['p', `45개 번호가 모두 같은 확률로 뽑힌다면 번호마다 약 ${expected.toFixed(1)}회씩 나와야 합니다. ` +
+        `이보다 ${Math.abs(diff).toFixed(1)}회(${Math.abs((diff / expected) * 100).toFixed(1)}%) ${diff >= 0 ? '많습니다' : '적습니다'}.`],
+      ['p', `그다음으로 ${word} 나온 번호는 ${nexts.map(([n, f]) => `${n}번(${fmt(f)}회)`).join(', ')}입니다.`],
+      ['p', `번호가 45개나 되면 우연만으로도 기대값보다 꽤 ${word} 나오는 번호가 생깁니다. ` +
+        "이 차이가 우연으로 설명되는지는 '특정 번호 쏠림'에서 볼 수 있습니다."],
+      ['p.muted', `기대값 = 회차 수 ${fmt(w.draws)}회 × 당첨번호 6개 ÷ 번호 45개`],
+    ];
+  }
+
+  // 가장 흔한 홀짝 조합
+  function oddEvenHelp(w) {
+    const theory = DATA.oddEvenTheory;
+    const [from, to] = rangeOf(w);
+    const name = (i) => `${i}:${6 - i}`;
+    const k = w.oddEven.indexOf(Math.max(...w.oddEven));
+    const theoryOrder = theory.map((t, i) => [i, t]).sort((a, b) => b[1] - a[1]);
+    const gapPt = (w.oddEven[k] - theory[k]) * 100;
+    let compare;
+    if (k !== theoryOrder[0][0]) {
+      compare = `이 기간에는 이론과 달리 ${name(k)}가 가장 많았는데, 회차 수가 적을수록 이런 차이는 흔합니다.`;
+    } else if (Math.abs(gapPt) < 2) {
+      compare = '실제 결과도 이론 확률과 거의 같습니다.';
+    } else {
+      compare = `실제 비율이 이론보다 ${Math.abs(gapPt).toFixed(1)}%p ${gapPt > 0 ? '높은데' : '낮은데'}, 회차 수가 적을수록 이런 차이는 흔합니다.`;
+    }
+    return [
+      ['strong', `${pct(w.oddEven[k])} · 이론 ${pct(theory[k])}`],
+      ['p', `${from}~${to}회 중 ${fmt(Math.round(w.oddEven[k] * w.draws))}회(${pct(w.oddEven[k])})가 홀수 ${k}개·짝수 ${6 - k}개 조합이었습니다.`],
+      ['p', '1~45 중 홀수는 23개, 짝수는 22개입니다. 6개를 무작위로 뽑으면 이론상 ' +
+        `${theoryOrder.slice(0, 3).map(([i, t]) => `${name(i)}(${pct(t)})`).join(', ')} 순으로 자주 나옵니다.`],
+      ['p', compare],
+      ['p.muted', '이론 확률 = 홀수 23개 중 k개와 짝수 22개 중 (6−k)개를 고르는 경우의 수 ÷ 45개 중 6개를 고르는 경우의 수(8,145,060)'],
+    ];
+  }
+
+  // '특정 번호 쏠림'이 무슨 뜻인지 풀어 쓴 설명
   function chiSquareHelp(w) {
     const chi = w.chi2.toFixed(1);
     const crit = DATA.chi2Critical;
