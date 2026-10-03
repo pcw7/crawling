@@ -124,6 +124,24 @@ def pair_counts(df):
     return [counts[pair] for pair in combinations(NUMBERS, 2)]
 
 
+# ---------------------------------------------------------------- 번호 패턴 (실제 비율 vs 이론 확률)
+# 각 함수는 {"actual": 구간별 실제 비율, "theory": 구간별 이론 확률, "total": 비율의 분모} 를 돌려준다.
+
+def fold(values, last):
+    """0, 1, ..., last-1, last 이상으로 묶는다. (값이 last 이상인 칸을 하나로 합침)"""
+    return values[:last] + [sum(values[last:])]
+
+
+def consecutive_pairs(df):
+    """회차별 연속 번호 쌍(예: 23·24)의 개수: 없음, 1쌍, 2쌍, 3쌍 이상.
+    23·24·25처럼 세 개가 이어지면 2쌍으로 센다."""
+    pairs = df[NUM_COLS].diff(axis=1).eq(1).sum(axis=1).clip(upper=3)
+    actual = pairs.value_counts(normalize=True).reindex(range(4), fill_value=0)
+    # 1~45에서 6개를 고를 때 연속 쌍이 정확히 s개인 조합 수 = C(5, s) × C(40, 6 − s)
+    theory = [comb(5, s) * comb(40, 6 - s) / comb(45, 6) for s in range(6)]
+    return {"actual": actual.tolist(), "theory": fold(theory, 3), "total": len(df)}
+
+
 def draws_since_last_seen(df):
     """번호별로 마지막으로 나온 뒤 몇 회차째 안 나오고 있는지."""
     long = df.melt(id_vars="draw_no", value_vars=NUM_COLS, value_name="number")

@@ -11,9 +11,9 @@ from pathlib import Path
 import pandas as pd
 
 from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
-                     draws_since_last_seen, number_frequency, odd_even_ratio,
-                     pair_counts, range_share, records, sum_distribution, sum_theory,
-                     yearly_trend)
+                     consecutive_pairs, draws_since_last_seen, number_frequency,
+                     odd_even_ratio, pair_counts, range_share, records, sum_distribution,
+                     sum_theory, yearly_trend)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATE_FILE = BASE_DIR / "site_template.html"
@@ -34,6 +34,15 @@ def summarize(df):
         "sumDist": [round(x, 6) for x in sum_distribution(df)],
         "sumMean": round(float(df[NUM_COLS].sum(axis=1).mean()), 1),
         "rangeShare": [round(x, 6) for x in ranges],
+    }
+
+
+def pattern(result):
+    """번호 패턴 결과의 비율을 소수 6자리로 줄인다."""
+    return {
+        "actual": [round(x, 6) for x in result["actual"]],
+        "theory": [round(x, 6) for x in result["theory"]],
+        "total": result["total"],
     }
 
 
@@ -67,6 +76,10 @@ def main():
         "yearly": yearly_trend(df),
         "records": records(df),
         "pairs": pair_counts(df),  # (1,2), (1,3), ..., (44,45) 순서
+        # 번호 패턴: 카드마다 차트 순서대로 [{actual, theory, total}, ...]
+        "patterns": {
+            "consecutive": [pattern(consecutive_pairs(df))],
+        },
     }
 
     # 검색 결과와 공유 미리보기 카드에 보일 설명 (최신 회차가 바뀌면 함께 바뀐다)

@@ -222,7 +222,7 @@
   .chart svg { display: block; }
   #freq-chart { height: 280px; }
   #oe-chart { height: 260px; }
-  #sum-chart, #range-chart { height: 240px; }
+  #sum-chart, #range-chart, .pattern-chart { height: 240px; }
   svg .grid { stroke: var(--grid); stroke-width: 1; }
   svg .axis { stroke: var(--baseline); stroke-width: 1; }
   svg .ref { stroke: var(--ink-2); stroke-width: 1; }
@@ -466,6 +466,9 @@
     </div>
     <div class="table-wrap" id="sum-table" hidden></div>
   </section>
+
+  <!-- 번호 패턴 카드들 (연속번호 등). 자바스크립트가 PATTERN_CARDS 설정대로 만든다 -->
+  <div id="patterns"></div>
 
   <section class="card">
     <div class="card-head">
@@ -997,7 +1000,8 @@
       w.oddEven.map((a, k) => [`${k}:${6 - k}`, pct(a), `${fmt(Math.round(a * w.draws))}회`, pct(DATA.oddEvenTheory[k])]));
   }
 
-  document.querySelectorAll('[data-table]').forEach((btn) => {
+  // "표로 보기" 버튼: data-table에 적힌 표를 열고 닫는다 (나중에 만든 카드의 버튼도 이 함수로 연결)
+  function bindTableToggle(btn) {
     btn.addEventListener('click', () => {
       const box = $(btn.dataset.table);
       const open = box.hidden;
@@ -1005,7 +1009,8 @@
       btn.setAttribute('aria-expanded', String(open));
       btn.textContent = open ? '표 닫기' : '표로 보기';
     });
-  });
+  }
+  document.querySelectorAll('[data-table]').forEach(bindTableToggle);
 
   // ------------------------------------------------------------ 내 번호 조회
   // 기간 선택과 관계없이 전체·최근 100회·최근 50회를 한 표에 보여준다
@@ -1315,6 +1320,78 @@
     renderPairChart();
   }
 
+  // ------------------------------------------------------------ 번호 패턴 카드 (심화 분석 탭)
+  // 숫자는 build_site.py가 DATA.patterns[key][i] = { actual, theory, total } 로 넘겨주고, 글자는 여기서 정한다.
+  // charts[i]는 카드 안의 i번째 차트이고, unit은 실제 횟수 뒤에 붙는 단위(회차를 세면 '회', 번호를 세면 '개')다.
+  const PATTERN_CARDS = [
+    {
+      key: 'consecutive',
+      title: '연속 번호',
+      sub: (d) => '23·24처럼 이어진 번호 쌍이 회차마다 몇 개 들어 있었는지입니다. 23·24·25처럼 세 개가 이어지면 2쌍으로 셉니다. ' +
+        `연속 번호가 하나라도 있었던 회차는 ${pct(1 - d[0].actual[0])}입니다. (이론 ${pct(1 - d[0].theory[0])})`,
+      charts: [{ title: '연속 번호 쌍', axis: '회차별 연속 번호 쌍의 개수', labels: ['없음', '1쌍', '2쌍', '3쌍 이상'], unit: '회' }],
+    },
+  ];
+
+  // 카드 틀과 표 (한 번만 만든다)
+  function renderPatternCards() {
+    const box = $('patterns');
+    box.textContent = '';
+    for (const card of PATTERN_CARDS) {
+      const data = DATA.patterns[card.key];
+      const section = htmlEl('section', 'card', null, box);
+      const head = htmlEl('div', 'card-head', null, section);
+      const titleBox = htmlEl('div', '', null, head);
+      htmlEl('h2', '', card.title, titleBox);
+      htmlEl('p', 'sub', card.sub(data), titleBox);
+      const btn = htmlEl('button', 'ghost', '표로 보기', head);
+      btn.type = 'button';
+      btn.dataset.table = `${card.key}-table`;
+      btn.setAttribute('aria-expanded', 'false');
+      bindTableToggle(btn);
+
+      const legend = htmlEl('div', 'legend', null, section);
+      for (const [swatch, name] of [['sw-bar', '실제 비율'], ['sw-dot', '이론 확률']]) {
+        const key = htmlEl('span', 'key', null, legend);
+        htmlEl('span', swatch, null, key);
+        key.append(name);
+      }
+      card.charts.forEach((chart, i) => {
+        const mini = htmlEl('div', 'mini', null, section);
+        if (card.charts.length > 1) htmlEl('h3', '', chart.title, mini);  // 차트가 하나면 카드 제목으로 충분하다
+        htmlEl('div', 'chart pattern-chart', null, mini).id = `${card.key}-chart-${i}`;
+      });
+
+      const table = htmlEl('div', 'table-wrap', null, section);
+      table.id = `${card.key}-table`;
+      table.hidden = true;
+      buildTable(table, ['구분', '실제 비율', '실제', '이론 확률'], card.charts.flatMap((chart, i) =>
+        chart.labels.map((label, k) => [
+          `${chart.title} ${label}`,
+          pct(data[i].actual[k]),
+          `${fmt(Math.round(data[i].actual[k] * data[i].total))}${chart.unit}`,
+          pct(data[i].theory[k]),
+        ])));
+    }
+  }
+
+  // 차트 (탭을 열 때와 화면 폭이 바뀔 때 다시 그린다)
+  function renderPatternCharts() {
+    for (const card of PATTERN_CARDS) {
+      const data = DATA.patterns[card.key];
+      card.charts.forEach((chart, i) => drawCompareChart($(`${card.key}-chart-${i}`), {
+        actual: data[i].actual,
+        theory: data[i].theory,
+        labels: chart.labels,
+        shortLabels: chart.shortLabels,
+        axisTitle: chart.axis,
+        ariaLabel: `${chart.title}, 실제 비율과 이론 확률`,
+        itemLabel: (k) => `${chart.title} · ${chart.labels[k]}`,
+        count: (k) => `${fmt(Math.round(data[i].actual[k] * data[i].total))}${chart.unit}`,
+      }));
+    }
+  }
+
   // ------------------------------------------------------------ 심화 분석 탭 (전체 회차 기준, 기간 선택과 무관)
   function renderAllTime() {
     $('more-note').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 회차 기준입니다.`;
@@ -1334,6 +1411,7 @@
       `${latest.year}년은 ${isInProgress(latest) ? '진행 중입니다' : `${latest.draws}회 추첨했습니다`}.`;
     buildTable($('trend-table'), ['연도', '추첨', ...TREND_METRICS.map((mt) => mt.title)],
       years.map((d) => [`${d.year}년`, `${d.draws}회`, ...TREND_METRICS.map((mt) => mt.value(d[mt.key]))]));
+    renderPatternCards();
     renderTrend();
     renderRecords();
     renderPairs();
@@ -1382,7 +1460,7 @@
   // 숨겨진 탭의 차트는 폭이 0이라 그리지 않으므로, 탭을 열 때 그 탭의 차트를 지금 폭에 맞게 그린다
   const TAB_CHARTS = {
     stats: () => { renderFreq(); renderOddEven(); },
-    more: () => { renderSumRange(); renderTrend(); renderPairChart(); },
+    more: () => { renderSumRange(); renderPatternCharts(); renderTrend(); renderPairChart(); },
   };
   const tabs = [...document.querySelectorAll('[role="tab"]')];
   let currentTab = 'stats';
