@@ -183,7 +183,26 @@
   /* 요약 타일 */
   .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
   .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
-  .tile-label { font-size: 13px; color: var(--ink-2); }
+  .tile-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
+
+  /* 도움말 ? 버튼과 설명 상자 */
+  .help {
+    flex: none; width: 18px; height: 18px; padding: 0; border-radius: 50%;
+    border: 1px solid var(--baseline); background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 11px; font-weight: 700; line-height: 1; cursor: help;
+    display: inline-grid; place-items: center;
+  }
+  .help:hover, .help[aria-expanded="true"] { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .help:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+  .help-pop {
+    position: fixed; z-index: 10; width: min(320px, calc(100vw - 32px));
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow);
+    padding: 12px 14px; font-size: 13px; line-height: 1.6; color: var(--ink-2);
+  }
+  .help-pop strong { display: block; margin-bottom: 6px; font-size: 14px; color: var(--ink); }
+  .help-pop p { margin: 0 0 6px; }
+  .help-pop p:last-child { margin-bottom: 0; }
+  .help-pop .muted { font-size: 12px; color: var(--muted); }
   .tile-value { font-size: 26px; font-weight: 650; line-height: 1.3; margin-top: 4px; }
   .tile-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
@@ -491,6 +510,7 @@
 </main>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>
+<div class="help-pop" id="help-pop" role="tooltip" hidden></div>
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -829,22 +849,94 @@
     const k = w.oddEven.indexOf(Math.max(...w.oddEven));
     const random = w.chi2 < DATA.chi2Critical;
 
+    // [제목, 값, 보조 문구, 도움말] — 도움말이 있으면 제목 옆에 ? 버튼을 단다
     const tiles = [
       ['가장 많이 나온 번호', listOf(numbersWith(max)), `${fmt(max)}회 · 기대값 ${expected}회`],
       ['가장 적게 나온 번호', listOf(numbersWith(min)), `${fmt(min)}회 · 기대값 ${expected}회`],
       ['가장 흔한 홀짝 조합', `${k}:${6 - k}`, `${pct(w.oddEven[k])} · 이론 ${pct(DATA.oddEvenTheory[k])}`],
-      ['특정 번호 쏠림', random ? '없음' : '있음',
-        `카이제곱 ${w.chi2.toFixed(1)} · 기준 ${DATA.chi2Critical} ${random ? '미만' : '이상'}`],
+      ['특정 번호 쏠림', random ? '없음' : '있음', null, chiSquareHelp(w)],
     ];
     const box = $('tiles');
     box.textContent = '';
-    for (const [label, value, sub] of tiles) {
+    for (const [label, value, sub, help] of tiles) {
       const tile = htmlEl('div', 'tile', null, box);
-      htmlEl('div', 'tile-label', label, tile);
+      const head = htmlEl('div', 'tile-label', label, tile);
+      if (help) bindHelp(htmlEl('button', 'help', '?', head), label, help);
       htmlEl('div', 'tile-value', value, tile);
-      htmlEl('div', 'tile-sub', sub, tile);
+      if (sub) htmlEl('div', 'tile-sub', sub, tile);
     }
   }
+
+  // '특정 번호 쏠림'이 무슨 뜻인지 풀어 쓴 설명 (기간마다 기대값과 카이제곱 값이 다르다)
+  function chiSquareHelp(w) {
+    const chi = w.chi2.toFixed(1);
+    const crit = DATA.chi2Critical;
+    const random = w.chi2 < crit;
+    return [
+      ['strong', `카이제곱 ${chi} · 기준 ${crit} ${random ? '미만' : '이상'}`],
+      ['p', `45개 번호가 모두 같은 확률로 뽑힌다면, 이 기간에는 번호마다 약 ${expectedOf(w).toFixed(1)}회씩 나와야 합니다.`],
+      ['p', '카이제곱은 번호마다 실제 횟수가 이 기대값에서 얼마나 벗어났는지를 숫자 하나로 합친 값입니다. 클수록 번호별 차이가 큽니다.'],
+      ['p', `완전히 무작위인 추첨에서도 이 정도 차이는 우연히 생깁니다. 무작위라면 카이제곱이 ${crit}을 넘을 확률이 5%뿐이라, 이 값을 기준으로 봅니다.`],
+      ['p', random
+        ? `지금 값 ${chi}은 기준보다 작아서, 특정 번호가 더 잘 나온다고 볼 근거가 없습니다.`
+        : `지금 값 ${chi}은 기준보다 커서 우연이라 보기엔 차이가 큽니다. 다만 이것만으로 특정 번호가 더 잘 나온다고 단정할 수는 없습니다.`],
+      ['p.muted', `계산: 번호마다 (실제 횟수 − 기대값)² ÷ 기대값을 구해 45개를 모두 더합니다. 기준 ${crit}은 자유도 44, 유의수준 5%의 값입니다.`],
+    ];
+  }
+
+  // ------------------------------------------------------------ 도움말 (? 버튼)
+  // 마우스를 올리거나 키보드로 포커스하면 보이고, 누르면 고정된다 (모바일은 탭으로 열고 닫음)
+  const helpPop = $('help-pop');
+  let helpOwner = null;
+  let helpPinned = false;
+
+  function showHelp(btn, parts) {
+    helpOwner = btn;
+    helpPop.textContent = '';
+    for (const [tag, text] of parts) {
+      const [name, cls] = tag.split('.');
+      htmlEl(name, cls || '', text, helpPop);
+    }
+    helpPop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    const r = btn.getBoundingClientRect();
+    const w = helpPop.offsetWidth;
+    const h = helpPop.offsetHeight;
+    let top = r.bottom + 8;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+    helpPop.style.left = Math.min(Math.max(16, r.left + r.width / 2 - w / 2), window.innerWidth - w - 16) + 'px';
+    helpPop.style.top = top + 'px';
+  }
+
+  function hideHelp() {
+    if (!helpOwner) return;
+    helpOwner.setAttribute('aria-expanded', 'false');
+    helpOwner = null;
+    helpPinned = false;
+    helpPop.hidden = true;
+  }
+
+  function bindHelp(btn, label, parts) {
+    btn.type = 'button';
+    btn.setAttribute('aria-label', `${label} 설명`);
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-describedby', 'help-pop');
+    btn.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') showHelp(btn, parts); });
+    btn.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && !helpPinned) hideHelp(); });
+    btn.addEventListener('focus', () => showHelp(btn, parts));
+    btn.addEventListener('blur', hideHelp);
+    btn.addEventListener('click', () => {
+      helpPinned = !(helpOwner === btn && helpPinned);
+      if (helpPinned) showHelp(btn, parts);
+      else hideHelp();
+    });
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if (helpOwner && !(e.target instanceof Element && e.target.closest('.help'))) hideHelp();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideHelp(); });
+  window.addEventListener('scroll', hideHelp, { passive: true });
 
   function renderTables() {
     const w = win();
@@ -1200,6 +1292,7 @@
   // ------------------------------------------------------------ 기간 선택
   function renderScoped() {
     hideTip();
+    hideHelp();
     const w = win();
     const [from, to] = rangeOf(w);
     $('freq-sub').textContent = `${from}~${to}회 · 보너스 번호 제외 · 가로선은 모든 번호가 똑같이 나올 때의 기대값(${expectedOf(w).toFixed(1)}회)`;
@@ -1247,6 +1340,7 @@
   function showTab(key, { focus = false } = {}) {
     currentTab = key;
     hideTip();
+    hideHelp();
     for (const tab of tabs) {
       const on = tab.dataset.tab === key;
       tab.setAttribute('aria-selected', String(on));
