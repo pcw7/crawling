@@ -201,7 +201,7 @@
   /* 차트 */
   .chart { position: relative; width: 100%; }
   .chart svg { display: block; }
-  #freq-chart, #mine-chart { height: 280px; }
+  #freq-chart { height: 280px; }
   #oe-chart { height: 260px; }
   #sum-chart, #range-chart { height: 240px; }
   svg .grid { stroke: var(--grid); stroke-width: 1; }
@@ -363,8 +363,7 @@
 
   <div class="tabs" role="tablist" aria-label="보기 선택">
     <button type="button" role="tab" id="tab-stats" data-tab="stats" aria-controls="panel-stats">번호 통계</button>
-    <button type="button" role="tab" id="tab-mine" data-tab="mine" aria-controls="panel-mine">내 번호</button>
-    <button type="button" role="tab" id="tab-records" data-tab="records" aria-controls="panel-records">역대 기록</button>
+    <button type="button" role="tab" id="tab-more" data-tab="more" aria-controls="panel-more">심화 분석</button>
   </div>
 
   <!-- 탭 1: 번호 통계 (기간 선택이 이 탭 안에만 적용된다) -->
@@ -404,6 +403,29 @@
   </section>
 
   <section class="card">
+    <h2>내 번호 조회</h2>
+    <p class="sub">번호를 최대 6개까지 입력하면 전체·최근 100회·최근 50회 동안 각 번호가 몇 번 나왔는지 보여 주고, 위 차트에도 표시합니다.</p>
+    <form class="mine-form" id="mine-form">
+      <input id="mine-input" inputmode="numeric" autocomplete="off" placeholder="예: 3 11 24 30 38 42" aria-label="번호 입력 (공백이나 쉼표로 구분)">
+      <button type="submit" class="primary">조회</button>
+      <button type="button" class="ghost" id="mine-clear" hidden>지우기</button>
+    </form>
+    <p class="error" id="mine-error" role="alert"></p>
+    <div id="mine-result"></div>
+  </section>
+
+  <section class="card">
+    <h2>오래 안 나온 번호</h2>
+    <p class="sub" id="gap-sub"></p>
+    <ol class="gap-list" id="gap-list"></ol>
+  </section>
+  </div>
+
+  <!-- 탭 2: 심화 분석 (전체 회차 기준) -->
+  <div class="panel" id="panel-more" role="tabpanel" aria-labelledby="tab-more" hidden>
+  <p class="panel-note" id="more-note"></p>
+
+  <section class="card">
     <div class="card-head">
       <div>
         <h2>번호 합계와 번호대</h2>
@@ -427,38 +449,6 @@
   </section>
 
   <section class="card">
-    <h2>오래 안 나온 번호</h2>
-    <p class="sub" id="gap-sub"></p>
-    <ol class="gap-list" id="gap-list"></ol>
-  </section>
-  </div>
-
-  <!-- 탭 2: 내 번호 -->
-  <div class="panel" id="panel-mine" role="tabpanel" aria-labelledby="tab-mine" hidden>
-  <section class="card">
-    <h2>내 번호 조회</h2>
-    <p class="sub">번호를 최대 6개까지 입력하면 전체·최근 100회·최근 50회 동안 각 번호가 몇 번 나왔는지 보여 주고, 아래 차트에 표시합니다.</p>
-    <form class="mine-form" id="mine-form">
-      <input id="mine-input" inputmode="numeric" autocomplete="off" placeholder="예: 3 11 24 30 38 42" aria-label="번호 입력 (공백이나 쉼표로 구분)">
-      <button type="submit" class="primary">조회</button>
-      <button type="button" class="ghost" id="mine-clear" hidden>지우기</button>
-    </form>
-    <p class="error" id="mine-error" role="alert"></p>
-    <div id="mine-result"></div>
-  </section>
-
-  <section class="card">
-    <h2>내 번호의 위치</h2>
-    <p class="sub" id="mine-chart-sub"></p>
-    <div class="chart" id="mine-chart"></div>
-  </section>
-  </div>
-
-  <!-- 탭 3: 역대 기록 (전체 회차 기준) -->
-  <div class="panel" id="panel-records" role="tabpanel" aria-labelledby="tab-records" hidden>
-  <p class="panel-note" id="records-note"></p>
-
-  <section class="card">
     <div class="card-head">
       <div>
         <h2>연도별 추이</h2>
@@ -471,7 +461,7 @@
   </section>
 
   <section class="card">
-    <h2>주요 기록</h2>
+    <h2>역대 기록</h2>
     <div class="records" id="records"></div>
   </section>
 
@@ -712,7 +702,7 @@
   }
 
   function renderFreq() {
-    drawFreqChart($('freq-chart'), win());
+    drawFreqChart($('freq-chart'), win(), new Set(state.mine));
   }
 
   // ------------------------------------------------------------ 실제 비율(막대) vs 이론 확률(점) 차트
@@ -802,8 +792,9 @@
     i === 0 ? '~60' : i === 9 ? '221~' : `${41 + 20 * i}`);
   const RANGE_LABELS = ['1~10', '11~20', '21~30', '31~40', '41~45'];
 
+  // 심화 분석 탭에 있으므로 기간 선택과 관계없이 전체 회차 기준
   function renderSumRange() {
-    const w = win();
+    const w = DATA.windows.all;
     const [from, to] = rangeOf(w);
     drawCompareChart($('sum-chart'), {
       actual: w.sumDist,
@@ -862,10 +853,6 @@
       w.freq.map((f, i) => [`${i + 1}번`, `${fmt(f)}회`, signed(f - expected)]));
     buildTable($('oe-table'), ['홀:짝', '실제 비율', '실제 횟수', '이론 확률'],
       w.oddEven.map((a, k) => [`${k}:${6 - k}`, pct(a), `${fmt(Math.round(a * w.draws))}회`, pct(DATA.oddEvenTheory[k])]));
-    buildTable($('sum-table'), ['구분', '실제 비율', '실제', '이론 확률'], [
-      ...w.sumDist.map((a, i) => [`합계 ${SUM_LABELS[i]}`, pct(a), `${fmt(Math.round(a * w.draws))}회`, pct(DATA.sumTheory[i])]),
-      ...w.rangeShare.map((a, i) => [`${RANGE_LABELS[i]}번대`, pct(a), `${fmt(Math.round(a * w.draws * 6))}개`, pct(DATA.rangeTheory[i])]),
-    ]);
   }
 
   document.querySelectorAll('[data-table]').forEach((btn) => {
@@ -912,14 +899,6 @@
     }
   }
 
-  function renderMineChart() {
-    const w = DATA.windows.all;
-    const [from, to] = rangeOf(w);
-    $('mine-chart-sub').textContent = `번호별 당첨 횟수 (${from}~${to}회 전체) · ` +
-      (state.mine.length ? '입력한 번호만 진하게 표시했습니다.' : '번호를 조회하면 그 번호만 진하게 표시합니다.');
-    drawFreqChart($('mine-chart'), w, new Set(state.mine));
-  }
-
   const mineInput = $('mine-input');
   const mineError = $('mine-error');
   const mineClear = $('mine-clear');
@@ -937,7 +916,7 @@
     state.mine = nums.sort((a, b) => a - b);
     mineClear.hidden = false;
     renderMine();
-    renderMineChart();
+    renderFreq();
   });
 
   mineClear.addEventListener('click', () => {
@@ -946,7 +925,7 @@
     mineError.textContent = '';
     mineClear.hidden = true;
     renderMine();
-    renderMineChart();
+    renderFreq();
   });
 
   // ------------------------------------------------------------ 기간과 무관한 부분
@@ -1194,9 +1173,17 @@
     renderPairChart();
   }
 
-  // ------------------------------------------------------------ 전체 회차 기록 (기간 선택과 무관)
+  // ------------------------------------------------------------ 심화 분석 탭 (전체 회차 기준, 기간 선택과 무관)
   function renderAllTime() {
-    $('records-note').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 회차 기준입니다.`;
+    $('more-note').textContent = `${DATA.first.no}~${DATA.last.no}회 전체 회차 기준입니다.`;
+
+    const all = DATA.windows.all;
+    const [from, to] = rangeOf(all);
+    $('sum-sub').textContent = `${from}~${to}회 · 번호 6개 합계의 평균은 ${all.sumMean.toFixed(1)} (이론 138)`;
+    buildTable($('sum-table'), ['구분', '실제 비율', '실제', '이론 확률'], [
+      ...all.sumDist.map((a, i) => [`합계 ${SUM_LABELS[i]}`, pct(a), `${fmt(Math.round(a * all.draws))}회`, pct(DATA.sumTheory[i])]),
+      ...all.rangeShare.map((a, i) => [`${RANGE_LABELS[i]}번대`, pct(a), `${fmt(Math.round(a * all.draws * 6))}개`, pct(DATA.rangeTheory[i])]),
+    ]);
 
     const years = DATA.yearly;
     const first = years[0];
@@ -1217,11 +1204,9 @@
     const [from, to] = rangeOf(w);
     $('freq-sub').textContent = `${from}~${to}회 · 보너스 번호 제외 · 가로선은 모든 번호가 똑같이 나올 때의 기대값(${expectedOf(w).toFixed(1)}회)`;
     $('oe-sub').textContent = `${from}~${to}회 · 1~45 중 홀수는 23개, 짝수는 22개`;
-    $('sum-sub').textContent = `${from}~${to}회 · 번호 6개 합계의 평균은 ${w.sumMean.toFixed(1)} (이론 138)`;
     renderTiles();
     renderFreq();
     renderOddEven();
-    renderSumRange();
     renderTables();
   }
 
@@ -1253,9 +1238,8 @@
   // ------------------------------------------------------------ 탭
   // 숨겨진 탭의 차트는 폭이 0이라 그리지 않으므로, 탭을 열 때 그 탭의 차트를 지금 폭에 맞게 그린다
   const TAB_CHARTS = {
-    stats: () => { renderFreq(); renderOddEven(); renderSumRange(); },
-    mine: () => renderMineChart(),
-    records: () => { renderTrend(); renderPairChart(); },
+    stats: () => { renderFreq(); renderOddEven(); },
+    more: () => { renderSumRange(); renderTrend(); renderPairChart(); },
   };
   const tabs = [...document.querySelectorAll('[role="tab"]')];
   let currentTab = 'stats';
@@ -1292,7 +1276,6 @@
   renderStatic();
   renderScoped();
   renderAllTime();
-  renderMineChart();
   const startTab = location.hash.slice(1);
   showTab(TAB_CHARTS[startTab] ? startTab : 'stats');
 
