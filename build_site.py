@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
+from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, carryover_neighbors, chi_square,
                      consecutive_pairs, draws_since_last_seen, ending_kinds, ending_share,
                      low_high, number_frequency, odd_even_ratio, pair_counts, range_share,
                      records, sum_distribution, sum_theory, yearly_trend)
@@ -81,6 +81,7 @@ def main():
             "consecutive": [pattern(consecutive_pairs(df))],
             "lowHigh": [pattern(low_high(df))],
             "ending": [pattern(ending_share(df)), pattern(ending_kinds(df))],
+            "carry": [pattern(p) for p in carryover_neighbors(df)],
         },
     }
 

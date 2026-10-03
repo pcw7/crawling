@@ -178,6 +178,30 @@ def ending_kinds(df):
     return {"actual": actual.tolist(), "theory": [sum(theory[:3])] + theory[3:], "total": len(df)}
 
 
+def carryover_neighbors(df):
+    """직전 회차와 비교한 이월수(직전 당첨번호가 다시 나온 개수)와 이웃수(직전 번호의 ±1이 나온 개수).
+    각각 0개, 1개, 2개, 3개 이상. 직전 번호와 같은 번호는 이월수로만 센다. 첫 회차는 직전 회차가 없어 뺀다."""
+    rows = df.sort_values("draw_no")[NUM_COLS].to_numpy().tolist()
+    carry, near = Counter(), Counter()
+    near_theory = [0.0] * 7
+    for prev, cur in zip(rows, rows[1:]):
+        prev, cur = set(prev), set(cur)
+        neighbors = {n + d for n in prev for d in (-1, 1) if 1 <= n + d <= 45} - prev
+        carry[min(len(cur & prev), 3)] += 1
+        near[min(len(cur & neighbors), 3)] += 1
+        # 이웃 번호 개수(m)가 회차마다 달라서, 회차마다 초기하분포를 구해 평균 낸다
+        m = len(neighbors)
+        for k in range(7):
+            near_theory[k] += comb(m, k) * comb(45 - m, 6 - k) / comb(45, 6)
+    n = len(rows) - 1
+    # 직전 당첨번호 6개와 나머지 39개 중 6개를 뽑을 때 직전 번호가 k개 들어갈 확률 (초기하분포)
+    carry_theory = [comb(6, k) * comb(39, 6 - k) / comb(45, 6) for k in range(7)]
+    return (
+        {"actual": [carry[k] / n for k in range(4)], "theory": fold(carry_theory, 3), "total": n},
+        {"actual": [near[k] / n for k in range(4)], "theory": fold([t / n for t in near_theory], 3), "total": n},
+    )
+
+
 def draws_since_last_seen(df):
     """번호별로 마지막으로 나온 뒤 몇 회차째 안 나오고 있는지."""
     long = df.melt(id_vars="draw_no", value_vars=NUM_COLS, value_name="number")
