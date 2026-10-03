@@ -151,6 +151,33 @@ def low_high(df):
     return {"actual": actual.tolist(), "theory": theory, "total": len(df)}
 
 
+# 끝자리(일의 자리)별 번호 개수: 끝자리 0은 4개(10·20·30·40), 1~5는 5개, 6~9는 4개
+ENDING_COUNTS = [sum(1 for n in NUMBERS if n % 10 == d) for d in range(10)]
+
+
+def ending_share(df):
+    """당첨번호(보너스 제외)의 끝자리 0~9 비율과 이론 비율(끝자리별 번호 개수 ÷ 45)."""
+    endings = df[NUM_COLS].to_numpy().ravel() % 10
+    actual = [float((endings == d).mean()) for d in range(10)]
+    return {"actual": actual, "theory": [c / 45 for c in ENDING_COUNTS], "total": int(endings.size)}
+
+
+def ending_kinds(df):
+    """회차별 번호 6개의 끝자리 종류 수: 3가지 이하, 4가지, 5가지, 6가지(모두 다름)."""
+    kinds = (df[NUM_COLS] % 10).nunique(axis=1).clip(lower=3)
+    actual = kinds.value_counts(normalize=True).reindex(range(3, 7), fill_value=0)
+    # 끝자리 묶음마다 몇 개를 고를지 정해 가며 (고른 개수, 쓴 끝자리 종류 수)별 조합 수를 센다
+    ways = {(0, 0): 1}
+    for size in ENDING_COUNTS:
+        nxt = Counter()
+        for (picked, used), w in ways.items():
+            for take in range(min(size, 6 - picked) + 1):
+                nxt[(picked + take, used + (take > 0))] += w * comb(size, take)
+        ways = nxt
+    theory = [ways[(6, k)] / comb(45, 6) for k in range(1, 7)]  # 종류 수 1~6가지
+    return {"actual": actual.tolist(), "theory": [sum(theory[:3])] + theory[3:], "total": len(df)}
+
+
 def draws_since_last_seen(df):
     """번호별로 마지막으로 나온 뒤 몇 회차째 안 나오고 있는지."""
     long = df.melt(id_vars="draw_no", value_vars=NUM_COLS, value_name="number")

@@ -11,9 +11,9 @@ from pathlib import Path
 import pandas as pd
 
 from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
-                     consecutive_pairs, draws_since_last_seen, low_high, number_frequency,
-                     odd_even_ratio, pair_counts, range_share, records, sum_distribution,
-                     sum_theory, yearly_trend)
+                     consecutive_pairs, draws_since_last_seen, ending_kinds, ending_share,
+                     low_high, number_frequency, odd_even_ratio, pair_counts, range_share,
+                     records, sum_distribution, sum_theory, yearly_trend)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATE_FILE = BASE_DIR / "site_template.html"
@@ -80,6 +80,7 @@ def main():
         "patterns": {
             "consecutive": [pattern(consecutive_pairs(df))],
             "lowHigh": [pattern(low_high(df))],
+            "ending": [pattern(ending_share(df)), pattern(ending_kinds(df))],
         },
     }
 
