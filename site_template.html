@@ -182,7 +182,7 @@
 
   /* 요약 타일 */
   .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .tile { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
   .tile-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
 
   /* 도움말 ? 버튼과 설명 상자 */
@@ -203,7 +203,7 @@
   .help-pop p { margin: 0 0 6px; }
   .help-pop p:last-child { margin-bottom: 0; }
   .help-pop .muted { font-size: 12px; color: var(--muted); }
-  .tile-value { font-size: 26px; font-weight: 650; line-height: 1.3; margin-top: 4px; }
+  .tile-value { flex: 1; display: grid; place-items: center; text-align: center; padding: 10px 0 4px; font-size: 26px; font-weight: 650; line-height: 1.3; }  /* 제목 아래 남은 공간의 가운데 */
   .tile-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
   /* 버튼 */
