@@ -150,8 +150,6 @@ robots.txt가 바뀌어 멈췄다면 바뀐 내용을 직접 확인하고, 문�
 python collect.py --accept-robots
 ```
 
-robots.txt 외의 규칙(이용약관 등)은 자동으로 확인할 수 없으므로 가끔 직접 확인합니다.
-
 ## 파일 구조
 
 | 파일 | 내용 |
