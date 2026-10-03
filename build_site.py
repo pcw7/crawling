@@ -11,7 +11,7 @@ from pathlib import Path
 import pandas as pd
 
 from analyze import (CHI2_CRITICAL, DATA_FILE, NUM_COLS, chi_square,
-                     consecutive_pairs, draws_since_last_seen, number_frequency,
+                     consecutive_pairs, draws_since_last_seen, low_high, number_frequency,
                      odd_even_ratio, pair_counts, range_share, records, sum_distribution,
                      sum_theory, yearly_trend)
 
@@ -79,6 +79,7 @@ def main():
         # 번호 패턴: 카드마다 차트 순서대로 [{actual, theory, total}, ...]
         "patterns": {
             "consecutive": [pattern(consecutive_pairs(df))],
+            "lowHigh": [pattern(low_high(df))],
         },
     }
 

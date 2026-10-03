@@ -222,7 +222,8 @@
   .chart svg { display: block; }
   #freq-chart { height: 280px; }
   #oe-chart { height: 260px; }
-  #sum-chart, #range-chart, .pattern-chart { height: 240px; }
+  #sum-chart, #range-chart { height: 240px; }
+  .pattern-chart { height: 260px; }
   svg .grid { stroke: var(--grid); stroke-width: 1; }
   svg .axis { stroke: var(--baseline); stroke-width: 1; }
   svg .ref { stroke: var(--ink-2); stroke-width: 1; }
@@ -1330,6 +1331,16 @@
       sub: (d) => '23·24처럼 이어진 번호 쌍이 회차마다 몇 개 들어 있었는지입니다. 23·24·25처럼 세 개가 이어지면 2쌍으로 셉니다. ' +
         `연속 번호가 하나라도 있었던 회차는 ${pct(1 - d[0].actual[0])}입니다. (이론 ${pct(1 - d[0].theory[0])})`,
       charts: [{ title: '연속 번호 쌍', axis: '회차별 연속 번호 쌍의 개수', labels: ['없음', '1쌍', '2쌍', '3쌍 이상'], unit: '회' }],
+    },
+    {
+      key: 'lowHigh',
+      title: '고저 비율',
+      sub: (d) => {
+        const k = d[0].actual.indexOf(Math.max(...d[0].actual));
+        return '낮은 번호(1~22, 22개)와 높은 번호(23~45, 23개)가 회차마다 몇 개씩 나왔는지입니다. ' +
+          `가장 흔한 조합은 낮은 번호 ${k}개·높은 번호 ${6 - k}개로 ${pct(d[0].actual[k])}입니다. (이론 ${pct(d[0].theory[k])})`;
+      },
+      charts: [{ title: '고저 조합', axis: '낮은 번호 : 높은 번호', labels: [0, 1, 2, 3, 4, 5, 6].map((k) => `${k}:${6 - k}`), unit: '회' }],
     },
   ];
 

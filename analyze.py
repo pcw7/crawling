@@ -142,6 +142,15 @@ def consecutive_pairs(df):
     return {"actual": actual.tolist(), "theory": fold(theory, 3), "total": len(df)}
 
 
+def low_high(df):
+    """회차별 낮은 번호(1~22) 개수 0~6개의 비율. 높은 번호(23~45)는 6 − 낮은 번호 개수다."""
+    low = (df[NUM_COLS] <= 22).sum(axis=1)
+    actual = low.value_counts(normalize=True).reindex(range(7), fill_value=0)
+    # 낮은 번호 22개, 높은 번호 23개 중 6개를 뽑을 때 낮은 번호가 k개일 확률 (초기하분포)
+    theory = [comb(22, k) * comb(23, 6 - k) / comb(45, 6) for k in range(7)]
+    return {"actual": actual.tolist(), "theory": theory, "total": len(df)}
+
+
 def draws_since_last_seen(df):
     """번호별로 마지막으로 나온 뒤 몇 회차째 안 나오고 있는지."""
     long = df.melt(id_vars="draw_no", value_vars=NUM_COLS, value_name="number")
